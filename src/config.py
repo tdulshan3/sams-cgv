@@ -82,6 +82,11 @@ many verdicts are worth checking by eye.
 """
 
 # --- M2 geometry ---
+TARGET_WIDTH = 1600
+CANNY_LOW, CANNY_HIGH = 50, 150
+MIN_SHEET_AREA_RATIO = 0.30
+MAX_SKEW_CORRECTION_DEG = 15.0
+BORDER_TRIM_PX = 6
 
 # --- M3 enhancement ---
 
