@@ -109,6 +109,14 @@ space sigma."""
 SHADOW_KERNEL = 25
 """Morphological kernel size used to estimate the background lighting map."""
 
+CONTRAST_METHOD = "clahe"
+"""Which of ``enhance_contrast``'s three methods ``EnhanceStage`` uses by
+default. CLAHE beats global histogram equalisation on a mostly-white page —
+see T4."""
+
+CLAHE_CLIP, CLAHE_GRID = 2.0, (8, 8)
+"""``cv2.createCLAHE`` parameters: clip limit and tile grid size."""
+
 # --- M4 binarisation ---
 
 # --- M5 table detection ---

@@ -14,6 +14,8 @@ from src.config import (
     BILATERAL_D,
     BILATERAL_SIGMA_COLOR,
     BILATERAL_SIGMA_SPACE,
+    CLAHE_CLIP,
+    CLAHE_GRID,
     GAUSSIAN_KSIZE,
     MEDIAN_KSIZE,
     SHADOW_KERNEL,
@@ -165,4 +167,11 @@ def enhance_contrast(grey: np.ndarray, method: str = "clahe") -> np.ndarray:
         # is mostly blank paper has one huge histogram spike, so a global
         # equalisation stretches that spike hard and amplifies noise in it.
         return cv2.equalizeHist(grey)
+    if method == "clahe":
+        # Equalises each small tile of the page on its own, then blends tile
+        # borders. A blank tile has little to stretch, so it stays quiet
+        # instead of amplifying its own noise the way global equalisation
+        # does — the local strokes are what get boosted.
+        clahe = cv2.createCLAHE(clipLimit=CLAHE_CLIP, tileGridSize=CLAHE_GRID)
+        return clahe.apply(grey)
     raise ValueError(f"unknown contrast method {method!r}")
