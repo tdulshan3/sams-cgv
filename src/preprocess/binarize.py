@@ -84,3 +84,20 @@ def otsu_between_class_variance(grey: np.ndarray) -> np.ndarray:
         variance = weight0 * weight1 * (mean0 - mean1) ** 2
 
     return np.nan_to_num(variance, nan=0.0, posinf=0.0, neginf=0.0)
+
+
+def threshold_otsu(grey: np.ndarray) -> tuple[np.ndarray, int]:
+    """Otsu's method: the threshold that maximises between-class variance.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        ``(binary, threshold)`` — the binary image (ink = 255) and the
+        chosen threshold level, 0-255. Tested to land within one level of
+        ``cv2.threshold(..., cv2.THRESH_OTSU)`` (``tests/test_binarize.py``).
+    """
+    variance = otsu_between_class_variance(grey)
+    threshold = int(np.argmax(variance))
+    _, binary = cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY_INV)
+    return binary, threshold
