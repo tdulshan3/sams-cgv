@@ -23,13 +23,17 @@ from skimage.morphology import skeletonize as _sk_skeletonize
 from src.config import (
     ADAPTIVE_BLOCK,
     ADAPTIVE_C,
+    BINARIZE_METHOD,
     MORPH_CLOSE_K,
     MORPH_KERNEL_SHAPE,
     MORPH_OPEN_K,
     SAUVOLA_WINDOW,
     THRESHOLD_GLOBAL_VALUE,
 )
+from src.utils.logging import get_logger
 from src.utils.stage import Stage
+
+log = get_logger("binarize")
 
 _KERNEL_SHAPES = {
     "ellipse": cv2.MORPH_ELLIPSE,
@@ -377,6 +381,36 @@ def morph_clean(
     return morph_close(morph_open(binary, open_k, shape), close_k, shape)
 
 
+def apply_threshold(grey: np.ndarray, method: str) -> np.ndarray:
+    """Binarise by name, so the method is a config value rather than an
+    ``if`` chain repeated at every call site.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"global"`` | ``"otsu"`` | ``"adaptive"`` | ``"sauvola"``.
+
+    Returns:
+        2-D ``uint8`` array, ink = 255.
+
+    Raises:
+        ValueError: ``method`` is not one of the four above. Never falls
+            through to a silent default — a typo in ``config.py`` should
+            stop the run, not quietly change which algorithm ran.
+    """
+    if method == "global":
+        return threshold_global(grey)
+    if method == "otsu":
+        return threshold_otsu(grey)[0]
+    if method == "adaptive":
+        return threshold_adaptive(grey)
+    if method == "sauvola":
+        return threshold_sauvola(grey)
+    raise ValueError(
+        f"unknown binarisation method {method!r}, expected one of "
+        "['global', 'otsu', 'adaptive', 'sauvola']"
+    )
+
+
 def compare_methods(grey: np.ndarray) -> list[dict]:
     """Run all four thresholding methods on the same image and measure each.
 
@@ -393,17 +427,10 @@ def compare_methods(grey: np.ndarray) -> list[dict]:
         ``components``, ``line_survival``, ``runtime_s`` — in the order
         global, otsu, adaptive, sauvola.
     """
-    methods = {
-        "global": lambda g: threshold_global(g),
-        "otsu": lambda g: threshold_otsu(g)[0],
-        "adaptive": lambda g: threshold_adaptive(g),
-        "sauvola": lambda g: threshold_sauvola(g),
-    }
-
     results = []
-    for name, apply_method in methods.items():
+    for name in ("global", "otsu", "adaptive", "sauvola"):
         started = time.perf_counter()
-        binary = apply_method(grey)
+        binary = apply_threshold(grey, name)
         elapsed = time.perf_counter() - started
 
         n_labels, _ = cv2.connectedComponents(binary)
@@ -418,3 +445,54 @@ def compare_methods(grey: np.ndarray) -> list[dict]:
             }
         )
     return results
+
+
+class BinarizeStage(Stage):
+    """Turns M3's ``ctx["grey"]`` into a clean two-valued ``ctx["binary"]``.
+
+    Chain: threshold (method from ``config.BINARIZE_METHOD``) -> opening ->
+    closing. Every parameter comes from ``src.config``, so retuning the
+    stage is a config edit rather than a code edit.
+
+    The output contract the rest of the project depends on: ``uint8``,
+    values strictly ``{0, 255}``, **ink 255 and paper 0**. M5, M6 and M7 all
+    assume that polarity, and getting it backwards breaks all three at once
+    without raising anything.
+    """
+
+    name = "binarize"
+
+    def __init__(self) -> None:
+        self._steps: dict[str, np.ndarray] = {}
+
+    def run(self, ctx: dict) -> dict:
+        grey = ctx["grey"]
+        raw = apply_threshold(grey, BINARIZE_METHOD)
+        cleaned = morph_clean(raw)
+
+        ink_percent = 100.0 * np.count_nonzero(cleaned) / cleaned.size
+        log.info(
+            "method=%s  ink=%.2f%%  kernels open=%d close=%d (%s)",
+            BINARIZE_METHOD,
+            ink_percent,
+            MORPH_OPEN_K,
+            MORPH_CLOSE_K,
+            MORPH_KERNEL_SHAPE,
+        )
+        # A page of handwriting on ruled paper is a few percent ink. Double
+        # digits means the threshold is reading paper texture or shadow as
+        # ink, and M5's line detection will drown in it.
+        if ink_percent > 20.0:
+            log.warning(
+                "ink coverage %.1f%% is far above the few percent a signing "
+                "sheet should show — check the %s threshold settings",
+                ink_percent,
+                BINARIZE_METHOD,
+            )
+
+        ctx["binary"] = cleaned
+        self._steps = {"binary raw": raw, "binary cleaned": cleaned}
+        return ctx
+
+    def figures(self) -> dict[str, np.ndarray]:
+        return dict(self._steps)

@@ -135,6 +135,11 @@ default of 2.0."""
 
 # --- M4 binarisation ---
 
+BINARIZE_METHOD = "adaptive"
+"""Which thresholding method ``BinarizeStage`` uses: ``global`` | ``otsu`` |
+``adaptive`` | ``sauvola``. See the T5 comparison in ``docs/contrib_m4.md``
+for the measurements behind this choice."""
+
 THRESHOLD_GLOBAL_VALUE = 127
 """Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
 exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
