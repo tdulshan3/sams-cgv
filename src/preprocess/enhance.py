@@ -97,4 +97,9 @@ def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
         return cv2.bilateralFilter(
             grey, BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE
         )
+    if method == "nlmeans":
+        # Averages every pixel against similar-looking patches across the
+        # whole image rather than just its local neighbourhood. Strong noise
+        # removal, but the slowest of the four by a wide margin.
+        return cv2.fastNlMeansDenoising(grey)
     raise ValueError(f"unknown denoise method {method!r}")
