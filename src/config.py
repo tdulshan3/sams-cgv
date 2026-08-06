@@ -89,6 +89,11 @@ MAX_SKEW_CORRECTION_DEG = 15.0
 BORDER_TRIM_PX = 6
 
 # --- M3 enhancement ---
+#
+# Agreed final chain, tuned against Otsu binarisation on all five sheets
+# (T6): luminosity greyscale -> shadow removal (kernel 25) -> bilateral
+# denoise -> CLAHE contrast (clip 1.5). See BILATERAL_D / SHADOW_KERNEL /
+# CLAHE_CLIP below for the reasoning behind each individual value.
 
 GREY_METHOD = "luminosity"
 """Which of ``to_grey``'s four methods ``EnhanceStage`` uses by default."""
