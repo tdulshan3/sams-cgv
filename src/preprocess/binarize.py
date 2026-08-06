@@ -16,7 +16,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from src.config import THRESHOLD_GLOBAL_VALUE
+from src.config import ADAPTIVE_BLOCK, ADAPTIVE_C, THRESHOLD_GLOBAL_VALUE
 from src.utils.stage import Stage
 
 
@@ -101,3 +101,46 @@ def threshold_otsu(grey: np.ndarray) -> tuple[np.ndarray, int]:
     threshold = int(np.argmax(variance))
     _, binary = cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY_INV)
     return binary, threshold
+
+
+def threshold_adaptive(
+    grey: np.ndarray,
+    method: str = "gaussian",
+    block: int = ADAPTIVE_BLOCK,
+    c: int = ADAPTIVE_C,
+) -> np.ndarray:
+    """Locally adaptive threshold: each pixel is compared against the mean
+    (or gaussian-weighted mean) of its own ``block`` x ``block`` neighbourhood
+    rather than one global cut-off.
+
+    This is normally the winner on phone photos of paper, because a single
+    global value cannot be right everywhere at once when lighting drifts
+    across the page — a local window adapts as it slides.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"mean"`` | ``"gaussian"``. Gaussian weights neighbours
+            closer to the centre pixel more heavily, mean weights them all
+            the same.
+        block: Neighbourhood size in pixels. Must be odd and at least 3.
+        c: Constant subtracted from the local mean before comparing —
+            raising it makes the cut stricter, so fewer paper pixels flip
+            to ink.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``, ink = 255.
+
+    Raises:
+        ValueError: ``block`` is even or smaller than 3, or ``method`` is
+            not one of the two above.
+    """
+    if method == "mean":
+        adaptive_method = cv2.ADAPTIVE_THRESH_MEAN_C
+    elif method == "gaussian":
+        adaptive_method = cv2.ADAPTIVE_THRESH_GAUSSIAN_C
+    else:
+        raise ValueError(f"unknown adaptive method {method!r}")
+
+    return cv2.adaptiveThreshold(
+        grey, 255, adaptive_method, cv2.THRESH_BINARY_INV, block, c
+    )

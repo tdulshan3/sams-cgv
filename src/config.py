@@ -139,6 +139,10 @@ THRESHOLD_GLOBAL_VALUE = 127
 """Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
 exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
 
+ADAPTIVE_BLOCK, ADAPTIVE_C = 35, 10
+"""``threshold_adaptive`` neighbourhood size (must be odd) and constant
+subtracted from the local mean/gaussian before comparing."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---
