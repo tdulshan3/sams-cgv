@@ -133,4 +133,13 @@ def remove_shadow(grey: np.ndarray) -> np.ndarray:
     """
     background = estimate_background(grey)
     ratio = grey.astype(np.float64) / (background.astype(np.float64) + 1e-6)
-    return np.clip(ratio * 255.0, 0, 255).astype(np.uint8)
+    flattened = np.clip(ratio * 255.0, 0, 255)
+
+    # The divide alone rarely reaches 0 or 255 — a shadowed corner's darkest
+    # ink still divides down to a mid-grey ratio, not black. Stretch the
+    # result back out to the full range so downstream contrast and
+    # thresholding get the dynamic range they expect.
+    lo, hi = flattened.min(), flattened.max()
+    if hi > lo:
+        flattened = (flattened - lo) * (255.0 / (hi - lo))
+    return flattened.astype(np.uint8)
