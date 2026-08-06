@@ -28,6 +28,8 @@ from src.config import (
     MORPH_KERNEL_SHAPE,
     MORPH_OPEN_K,
     SAUVOLA_WINDOW,
+    SIG_MORPH_CLOSE_K,
+    SIG_MORPH_OPEN_K,
     THRESHOLD_GLOBAL_VALUE,
 )
 from src.utils.logging import get_logger
@@ -445,6 +447,31 @@ def compare_methods(grey: np.ndarray) -> list[dict]:
             }
         )
     return results
+
+
+def clean_signature_crop(mask: np.ndarray, skeleton: bool = False) -> np.ndarray:
+    """Clean one small signature crop for M8's recognition work.
+
+    Same operations as :func:`morph_clean`, different scale. The whole-sheet
+    kernels are sized against a 1600-pixel-wide page; a signature crop is a
+    couple of hundred pixels across, and reusing those kernels on it erodes
+    a thin ballpoint stroke to nothing. This uses
+    ``config.SIG_MORPH_OPEN_K`` / ``SIG_MORPH_CLOSE_K`` instead — opening
+    small enough to leave a hairline stroke intact, closing sized to bridge
+    the pen skips that a fast signature is full of.
+
+    Args:
+        mask: 2-D ``uint8`` crop, ink = 255. M6's per-cell mask.
+        skeleton: When ``True``, also thin the result to one-pixel strokes
+            (see :func:`skeletonize_ink`). M8 wants the filled mask for
+            shape comparison and the skeleton for stroke-length features,
+            so both are available from one call.
+
+    Returns:
+        2-D ``uint8`` array, same shape, ink = 255.
+    """
+    cleaned = morph_clean(mask, open_k=SIG_MORPH_OPEN_K, close_k=SIG_MORPH_CLOSE_K)
+    return skeletonize_ink(cleaned) if skeleton else cleaned
 
 
 class BinarizeStage(Stage):

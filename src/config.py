@@ -159,6 +159,13 @@ deliberately small: a closing kernel large enough to bridge a wide pen skip
 is also large enough to weld a signature onto the printed table border,
 which would hand M6 a signature that is partly table line."""
 
+SIG_MORPH_OPEN_K, SIG_MORPH_CLOSE_K = 2, 2
+"""Kernel sizes for ``clean_signature_crop``, M8's small-crop variant.
+
+Smaller than the whole-sheet pair above. The sheet kernels are sized against
+a 1600-pixel-wide page; applied to a signature crop a couple of hundred
+pixels across they erode a thin ballpoint stroke away entirely."""
+
 MORPH_KERNEL_SHAPE = "ellipse"
 """Structuring element shape: ``ellipse`` | ``rect`` | ``cross``.
 
