@@ -135,6 +135,10 @@ default of 2.0."""
 
 # --- M4 binarisation ---
 
+THRESHOLD_GLOBAL_VALUE = 127
+"""Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
+exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---
