@@ -146,6 +146,14 @@ subtracted from the local mean/gaussian before comparing."""
 SAUVOLA_WINDOW = 25
 """``threshold_sauvola`` local neighbourhood size, must be odd."""
 
+MORPH_OPEN_K, MORPH_CLOSE_K = 2, 3
+"""Opening and closing kernel sizes for ``morph_clean``.
+
+Opening removes speckle, closing repairs broken pen strokes. Both are kept
+deliberately small: a closing kernel large enough to bridge a wide pen skip
+is also large enough to weld a signature onto the printed table border,
+which would hand M6 a signature that is partly table line."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---

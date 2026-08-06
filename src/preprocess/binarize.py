@@ -19,7 +19,14 @@ import cv2
 import numpy as np
 from skimage.filters import threshold_sauvola as _sk_threshold_sauvola
 
-from src.config import ADAPTIVE_BLOCK, ADAPTIVE_C, SAUVOLA_WINDOW, THRESHOLD_GLOBAL_VALUE
+from src.config import (
+    ADAPTIVE_BLOCK,
+    ADAPTIVE_C,
+    MORPH_CLOSE_K,
+    MORPH_OPEN_K,
+    SAUVOLA_WINDOW,
+    THRESHOLD_GLOBAL_VALUE,
+)
 from src.utils.stage import Stage
 
 
@@ -220,6 +227,82 @@ def line_survival_ratio(binary: np.ndarray, min_len_ratio: float = 0.5) -> float
         return 0.0
     row_coverage = long_runs.sum(axis=1) / 255.0
     return float(row_coverage.max() / width)
+
+
+def morph_open(binary: np.ndarray, kernel_size: int = MORPH_OPEN_K) -> np.ndarray:
+    """Morphological opening: erode then dilate.
+
+    Erosion deletes any ink blob smaller than the kernel — the isolated
+    specks that paper texture and sensor noise leave behind after
+    thresholding. Dilation then restores every surviving stroke to its
+    original thickness. Net effect: specks gone, real ink unchanged.
+
+    Uses an elliptical kernel: pen strokes are rounded, and a round kernel
+    erodes them evenly instead of squaring off their ends the way
+    ``MORPH_RECT`` does.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        kernel_size: Side of the structuring element in pixels. A size of
+            0 or 1 is a no-op, returned unchanged.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    if kernel_size <= 1:
+        return binary
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    return cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+
+
+def morph_close(binary: np.ndarray, kernel_size: int = MORPH_CLOSE_K) -> np.ndarray:
+    """Morphological closing: dilate then erode.
+
+    Dilation grows every stroke outward, so a hairline gap where the pen
+    skipped gets bridged; erosion then shrinks the strokes back, keeping
+    the bridge. Net effect: broken strokes repaired.
+
+    The danger runs the other way from opening: a kernel big enough to
+    bridge a 3-pixel pen skip is also big enough to weld a signature to the
+    printed table line above it, and M6 then measures a signature that is
+    40% table. That is why the kernel here stays small and tunable in
+    ``config.py`` — see the T6 note in BUILD_SPEC.md section 9.4.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        kernel_size: Side of the structuring element in pixels. A size of
+            0 or 1 is a no-op, returned unchanged.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    if kernel_size <= 1:
+        return binary
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    return cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+
+def morph_clean(
+    binary: np.ndarray,
+    open_k: int = MORPH_OPEN_K,
+    close_k: int = MORPH_CLOSE_K,
+) -> np.ndarray:
+    """The full clean-up: opening first (kill specks), closing second
+    (repair strokes).
+
+    Order matters. Closing first would weld nearby specks into blobs big
+    enough for the subsequent opening to keep, so the noise would survive.
+    Opening first removes them while they are still small and isolated.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        open_k: Opening kernel size, see :func:`morph_open`.
+        close_k: Closing kernel size, see :func:`morph_close`.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    return morph_close(morph_open(binary, open_k), close_k)
 
 
 def compare_methods(grey: np.ndarray) -> list[dict]:
