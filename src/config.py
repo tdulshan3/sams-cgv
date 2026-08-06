@@ -95,6 +95,45 @@ many verdicts are worth checking by eye.
 
 # --- M8 recognition ---
 
+SIG_NORM_SIZE = (220, 120)
+"""Fixed (width, height) every signature is normalised to before comparison.
+
+Two signatures cannot be compared until they sit in the same box at the same
+scale — this is the box.
+"""
+
+SIG_NORM_PAD = 10
+"""Pixels of white padding kept around the trimmed ink before resizing."""
+
+HOG_ORIENTATIONS, HOG_PPC, HOG_CPB = 9, (8, 8), (2, 2)
+"""HOG descriptor parameters: orientation bins, pixels per cell, cells per block."""
+
+ORB_N_FEATURES = 500
+"""Max ORB keypoints per signature."""
+
+ORB_LOWE_RATIO = 0.75
+"""Lowe's ratio test threshold for accepting an ORB keypoint match as good."""
+
+SCORE_WEIGHTS = {"ssim": 0.30, "hog": 0.30, "hu": 0.10, "orb": 0.15, "custom": 0.15}
+"""Weights for the combined score. Must sum to 1.0 — justified in T5 by which
+feature separates genuine from impostor pairs best.
+"""
+
+MATCH_THRESHOLD = 0.62
+"""Combined score above this is a match. Set from the EER experiment in T5 —
+never guessed.
+"""
+
+UNCERTAIN_BAND = 0.08
+"""Scores within this band below MATCH_THRESHOLD are reported uncertain
+rather than a confident mismatch.
+"""
+
+USE_CNN_FEATURES = False
+"""Tier 3, optional. Pretrained ResNet18 embedding as an extra score. Off
+until T8, and only switched on if it measurably helps.
+"""
+
 # --- M9 visualisation ---
 
 
