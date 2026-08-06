@@ -17,9 +17,67 @@ import numpy as np
 import pytest
 from skimage.metrics import peak_signal_noise_ratio
 
-from src.preprocess.enhance import denoise, to_grey
+from src.preprocess.enhance import denoise, enhance_contrast, remove_shadow, to_grey
 
 DENOISE_METHODS = ["gaussian", "median", "bilateral", "nlmeans"]
+
+
+def test_to_grey_shape_and_dtype():
+    """to_grey output is 2-D uint8, same height and width as the input."""
+    bgr = np.zeros((30, 50, 3), dtype=np.uint8)
+    grey = to_grey(bgr, "luminosity")
+    assert grey.ndim == 2
+    assert grey.dtype == np.uint8
+    assert grey.shape == (30, 50)
+
+
+def test_luminosity_pure_red_pixel():
+    """Luminosity of a pure red pixel (0, 0, 255) BGR is approximately 76."""
+    red = np.array([[[0, 0, 255]]], dtype=np.uint8)
+    grey = to_grey(red, "luminosity")
+    assert abs(int(grey[0, 0]) - 76) <= 1
+
+
+def test_denoise_reduces_variance_on_noisy_flat_patch():
+    """denoise reduces variance on a synthetic noisy flat patch."""
+    rng = np.random.default_rng(1)
+    flat = np.full((60, 60), 180, dtype=np.uint8)
+    noisy = np.clip(
+        flat.astype(np.int16) + rng.normal(0, 20, flat.shape), 0, 255
+    ).astype(np.uint8)
+
+    for method in DENOISE_METHODS:
+        result = denoise(noisy, method)
+        assert result.var() < noisy.var()
+
+
+def test_remove_shadow_flattens_linear_ramp():
+    """remove_shadow on a linear brightness ramp reduces the left/right half
+    difference that a shadow gradient would otherwise cause."""
+    height, width = 200, 200
+    ramp = np.tile(np.linspace(60, 220, width, dtype=np.uint8), (height, 1))
+
+    def half_difference(image: np.ndarray) -> float:
+        left = image[:, : width // 2].astype(np.float64).mean()
+        right = image[:, width // 2 :].astype(np.float64).mean()
+        return abs(left - right)
+
+    flattened = remove_shadow(ramp)
+    assert half_difference(flattened) < half_difference(ramp)
+
+
+def test_unknown_method_raises_value_error():
+    """An unknown method name raises ValueError for every method-selecting
+    function, rather than silently falling back to a default."""
+    grey = np.zeros((10, 10), dtype=np.uint8)
+    bgr = np.zeros((10, 10, 3), dtype=np.uint8)
+
+    with pytest.raises(ValueError):
+        to_grey(bgr, "not-a-method")
+    with pytest.raises(ValueError):
+        denoise(grey, "not-a-method")
+    with pytest.raises(ValueError):
+        enhance_contrast(grey, "not-a-method")
 
 
 def test_denoise_psnr_and_runtime_metrics():
