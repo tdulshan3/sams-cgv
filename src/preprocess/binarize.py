@@ -38,3 +38,49 @@ def threshold_global(grey: np.ndarray, value: int = THRESHOLD_GLOBAL_VALUE) -> n
     """
     _, binary = cv2.threshold(grey, value, 255, cv2.THRESH_BINARY_INV)
     return binary
+
+
+def otsu_between_class_variance(grey: np.ndarray) -> np.ndarray:
+    """Between-class variance at every candidate threshold, Otsu's own search
+    written out by hand rather than delegated to ``cv2.THRESH_OTSU``.
+
+    The idea: treat every level ``t`` as a hypothetical cut between "paper"
+    and "ink" pixels. A good cut is one where the two resulting classes are
+    each tight around their own mean and far apart from each other — that
+    separation is exactly what between-class variance measures, and it is
+    equivalent to minimising the variance *within* each class, which is
+    Otsu's original formulation.
+
+    For every ``t`` in 0..255:
+        ``w0, w1``  — fraction of pixels below / at-or-above ``t``
+        ``m0, m1``  — mean intensity of each class
+        ``variance = w0 * w1 * (m0 - m1) ** 2``
+
+    Computed with cumulative sums rather than a 256-iteration Python loop —
+    same maths, vectorised.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        ``float64`` array of length 256: the variance at each threshold.
+    """
+    histogram, _ = np.histogram(grey, bins=256, range=(0, 256))
+    total_pixels = histogram.sum()
+    if total_pixels == 0:
+        return np.zeros(256, dtype=np.float64)
+
+    probabilities = histogram.astype(np.float64) / total_pixels
+    levels = np.arange(256, dtype=np.float64)
+
+    weight0 = np.cumsum(probabilities)          # P(pixel <= t)
+    weight1 = 1.0 - weight0                      # P(pixel > t)
+    running_sum = np.cumsum(probabilities * levels)
+    total_mean = running_sum[-1]
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mean0 = np.where(weight0 > 0, running_sum / weight0, 0.0)
+        mean1 = np.where(weight1 > 0, (total_mean - running_sum) / weight1, 0.0)
+        variance = weight0 * weight1 * (mean0 - mean1) ** 2
+
+    return np.nan_to_num(variance, nan=0.0, posinf=0.0, neginf=0.0)
