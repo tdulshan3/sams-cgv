@@ -16,10 +16,14 @@ from src.config import (
     BILATERAL_SIGMA_SPACE,
     CLAHE_CLIP,
     CLAHE_GRID,
+    CONTRAST_METHOD,
+    DENOISE_METHOD,
     GAUSSIAN_KSIZE,
+    GREY_METHOD,
     MEDIAN_KSIZE,
     SHADOW_KERNEL,
 )
+from src.utils.stage import Stage
 
 
 def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
@@ -175,3 +179,35 @@ def enhance_contrast(grey: np.ndarray, method: str = "clahe") -> np.ndarray:
         clahe = cv2.createCLAHE(clipLimit=CLAHE_CLIP, tileGridSize=CLAHE_GRID)
         return clahe.apply(grey)
     raise ValueError(f"unknown contrast method {method!r}")
+
+
+class EnhanceStage(Stage):
+    """Turns ``ctx["warped"]`` into a clean, evenly lit ``ctx["grey"]``.
+
+    Chain: greyscale -> shadow removal -> denoise -> contrast. Each step's
+    method comes from ``src.config`` so the chain is retuned there, never by
+    editing this file.
+    """
+
+    name = "enhance"
+
+    def __init__(self) -> None:
+        self._steps: dict[str, np.ndarray] = {}
+
+    def run(self, ctx: dict) -> dict:
+        grey = to_grey(ctx["warped"], method=GREY_METHOD)
+        flattened = remove_shadow(grey)
+        denoised = denoise(flattened, method=DENOISE_METHOD)
+        contrasted = enhance_contrast(denoised, method=CONTRAST_METHOD)
+
+        ctx["grey"] = contrasted
+        self._steps = {
+            "grey": grey,
+            "shadow removed": flattened,
+            "denoised": denoised,
+            "contrast enhanced": contrasted,
+        }
+        return ctx
+
+    def figures(self) -> dict[str, np.ndarray]:
+        return dict(self._steps)
