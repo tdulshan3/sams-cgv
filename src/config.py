@@ -144,9 +144,24 @@ THRESHOLD_GLOBAL_VALUE = 127
 """Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
 exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
 
-ADAPTIVE_BLOCK, ADAPTIVE_C = 35, 10
+ADAPTIVE_BLOCK, ADAPTIVE_C = 41, 12
 """``threshold_adaptive`` neighbourhood size (must be odd) and constant
-subtracted from the local mean/gaussian before comparing."""
+subtracted from the local mean/gaussian before comparing.
+
+Swept block 15-51 against c 5-15 on all five sheets (T3). The result is a
+broad plateau rather than a sharp optimum — across the whole grid ink
+coverage moves only between 7.6% and 10.0% — so these two numbers are
+chosen to avoid the edges of that plateau rather than to chase a peak:
+
+- ``c = 5`` is a cliff, not a slope: component count jumps from ~400 to
+  ~1100 as paper texture starts crossing the threshold. Anything from 8
+  upward is stable, and 12 sits comfortably clear of the cliff.
+- Larger blocks preserve the thin printed table lines slightly better,
+  because a thin dark line contrasts more strongly against a wider bright
+  neighbourhood. Below block 21 line survival starts dropping. 41 keeps
+  that margin without drifting so wide that the threshold stops being
+  local and starts behaving globally.
+"""
 
 SAUVOLA_WINDOW = 25
 """``threshold_sauvola`` local neighbourhood size, must be odd."""
