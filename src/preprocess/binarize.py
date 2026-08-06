@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
+from skimage.filters import threshold_sauvola as _sk_threshold_sauvola
 
-from src.config import ADAPTIVE_BLOCK, ADAPTIVE_C, THRESHOLD_GLOBAL_VALUE
+from src.config import ADAPTIVE_BLOCK, ADAPTIVE_C, SAUVOLA_WINDOW, THRESHOLD_GLOBAL_VALUE
 from src.utils.stage import Stage
 
 
@@ -149,3 +150,35 @@ def threshold_adaptive(
     return cv2.adaptiveThreshold(
         grey, 255, adaptive_method, cv2.THRESH_BINARY_INV, block, c
     )
+
+
+def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndarray:
+    """Sauvola's local threshold, purpose-built for document images.
+
+    Like :func:`threshold_adaptive`, the cut-off is local rather than global,
+    but the formula also scales with the local *standard deviation*: a
+    smooth patch of paper gets a threshold close to its own mean (so faint
+    texture is not read as ink), while a patch with real contrast — an edge
+    of a printed line or a pen stroke — gets a threshold pulled further from
+    the mean. That extra term is what ``skimage`` was built around for
+    scanned documents specifically, which is why it is worth comparing
+    against plain adaptive thresholding here (T5).
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        window: Local neighbourhood size in pixels. Must be odd and at
+            least 3.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``, ink = 255.
+
+    Raises:
+        ValueError: ``window`` is even or smaller than 3.
+    """
+    if window < 3:
+        raise ValueError(f"window must be at least 3, got {window}")
+    if window % 2 == 0:
+        raise ValueError(f"window must be odd, got {window}")
+
+    local_threshold = _sk_threshold_sauvola(grey.astype(np.float64), window_size=window)
+    return np.where(grey.astype(np.float64) < local_threshold, 255, 0).astype(np.uint8)

@@ -143,6 +143,9 @@ ADAPTIVE_BLOCK, ADAPTIVE_C = 35, 10
 """``threshold_adaptive`` neighbourhood size (must be odd) and constant
 subtracted from the local mean/gaussian before comparing."""
 
+SAUVOLA_WINDOW = 25
+"""``threshold_sauvola`` local neighbourhood size, must be odd."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---
