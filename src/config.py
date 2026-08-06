@@ -114,8 +114,15 @@ CONTRAST_METHOD = "clahe"
 default. CLAHE beats global histogram equalisation on a mostly-white page —
 see T4."""
 
-CLAHE_CLIP, CLAHE_GRID = 2.0, (8, 8)
-"""``cv2.createCLAHE`` parameters: clip limit and tile grid size."""
+CLAHE_CLIP, CLAHE_GRID = 1.5, (8, 8)
+"""``cv2.createCLAHE`` parameters: clip limit and tile grid size.
+
+Swept 1.0-4.0 against Otsu binarisation on all five sheets: every step up in
+clip limit increases both the ink percentage picked up on blank paper and the
+noise std inside a blank patch, with no corresponding gain once denoise has
+already run. 1.5 sits low enough on that curve to avoid amplifying paper
+texture into speckle, while still lifting faint strokes above the global
+default of 2.0."""
 
 # --- M4 binarisation ---
 
