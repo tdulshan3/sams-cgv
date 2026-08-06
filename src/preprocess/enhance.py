@@ -13,6 +13,16 @@ import numpy as np
 def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
     """Collapse a BGR image to one channel.
 
+    ``average`` and ``luminosity`` are written by hand with NumPy rather than
+    ``cv2.cvtColor`` so the weights are visible. The luminosity weights
+    (0.299 R, 0.587 G, 0.114 B) are not arbitrary — they come from how the
+    human retina responds to colour. Cone cells are most numerous and most
+    sensitive in the green part of the spectrum, so a green pixel *looks*
+    brighter than a red or blue pixel of the same raw intensity even though a
+    plain average treats all three the same. Weighting green highest and blue
+    lowest is what makes the greyscale conversion match human perception
+    instead of just measuring photon count.
+
     Args:
         bgr: Colour image, uint8, any number of rows/columns.
         method: ``"average"`` | ``"luminosity"`` | ``"lightness"`` |
