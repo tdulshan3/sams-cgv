@@ -143,3 +143,26 @@ def remove_shadow(grey: np.ndarray) -> np.ndarray:
     if hi > lo:
         flattened = (flattened - lo) * (255.0 / (hi - lo))
     return flattened.astype(np.uint8)
+
+
+def enhance_contrast(grey: np.ndarray, method: str = "clahe") -> np.ndarray:
+    """Stretch contrast so faint pen strokes stand out from the paper.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"none"`` | ``"histeq"`` | ``"clahe"``.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``.
+
+    Raises:
+        ValueError: ``method`` is not one of the three above.
+    """
+    if method == "none":
+        return grey
+    if method == "histeq":
+        # Redistributes the whole image's histogram to be flat. A page that
+        # is mostly blank paper has one huge histogram spike, so a global
+        # equalisation stretches that spike hard and amplifies noise in it.
+        return cv2.equalizeHist(grey)
+    raise ValueError(f"unknown contrast method {method!r}")
