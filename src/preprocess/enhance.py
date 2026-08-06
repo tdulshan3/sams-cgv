@@ -10,7 +10,13 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from src.config import GAUSSIAN_KSIZE, MEDIAN_KSIZE
+from src.config import (
+    BILATERAL_D,
+    BILATERAL_SIGMA_COLOR,
+    BILATERAL_SIGMA_SPACE,
+    GAUSSIAN_KSIZE,
+    MEDIAN_KSIZE,
+)
 
 
 def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
@@ -84,4 +90,11 @@ def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
         # Replaces each pixel with the median of its neighbourhood. Removes
         # salt-and-pepper style outliers that a gaussian blur only smears.
         return cv2.medianBlur(grey, MEDIAN_KSIZE)
+    if method == "bilateral":
+        # Weighs neighbours by both spatial distance and intensity
+        # difference, so it smooths flat paper texture without blurring
+        # across a strong edge such as a pen stroke boundary.
+        return cv2.bilateralFilter(
+            grey, BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE
+        )
     raise ValueError(f"unknown denoise method {method!r}")

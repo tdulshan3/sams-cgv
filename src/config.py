@@ -102,6 +102,10 @@ GAUSSIAN_KSIZE = 5
 MEDIAN_KSIZE = 3
 """Kernel size (odd) for the median denoise option."""
 
+BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE = 9, 75, 75
+"""``cv2.bilateralFilter`` parameters: neighbourhood diameter, colour sigma,
+space sigma."""
+
 # --- M4 binarisation ---
 
 # --- M5 table detection ---
