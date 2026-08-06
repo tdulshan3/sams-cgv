@@ -89,6 +89,49 @@ MAX_SKEW_CORRECTION_DEG = 15.0
 BORDER_TRIM_PX = 6
 
 # --- M3 enhancement ---
+#
+# Agreed final chain, tuned against Otsu binarisation on all five sheets
+# (T6): luminosity greyscale -> shadow removal (kernel 25) -> bilateral
+# denoise -> CLAHE contrast (clip 1.5). See BILATERAL_D / SHADOW_KERNEL /
+# CLAHE_CLIP below for the reasoning behind each individual value.
+
+GREY_METHOD = "luminosity"
+"""Which of ``to_grey``'s four methods ``EnhanceStage`` uses by default."""
+
+DENOISE_METHOD = "bilateral"
+"""Which of ``denoise``'s four methods ``EnhanceStage`` uses by default."""
+
+GAUSSIAN_KSIZE = 5
+"""Kernel size (odd) for the gaussian denoise option."""
+
+MEDIAN_KSIZE = 3
+"""Kernel size (odd) for the median denoise option."""
+
+BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE = 9, 75, 75
+"""``cv2.bilateralFilter`` parameters: neighbourhood diameter, colour sigma,
+space sigma."""
+
+NLMEANS_H = 10
+"""``cv2.fastNlMeansDenoising`` filter strength. OpenCV's own default of 3 is
+too weak to touch the noise levels seen on the phone photos."""
+
+SHADOW_KERNEL = 25
+"""Morphological kernel size used to estimate the background lighting map."""
+
+CONTRAST_METHOD = "clahe"
+"""Which of ``enhance_contrast``'s three methods ``EnhanceStage`` uses by
+default. CLAHE beats global histogram equalisation on a mostly-white page —
+see T4."""
+
+CLAHE_CLIP, CLAHE_GRID = 1.5, (8, 8)
+"""``cv2.createCLAHE`` parameters: clip limit and tile grid size.
+
+Swept 1.0-4.0 against Otsu binarisation on all five sheets: every step up in
+clip limit increases both the ink percentage picked up on blank paper and the
+noise std inside a blank patch, with no corresponding gain once denoise has
+already run. 1.5 sits low enough on that curve to avoid amplifying paper
+texture into speckle, while still lifting faint strokes above the global
+default of 2.0."""
 
 # --- M4 binarisation ---
 
