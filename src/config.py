@@ -93,6 +93,15 @@ BORDER_TRIM_PX = 6
 GREY_METHOD = "luminosity"
 """Which of ``to_grey``'s four methods ``EnhanceStage`` uses by default."""
 
+DENOISE_METHOD = "bilateral"
+"""Which of ``denoise``'s four methods ``EnhanceStage`` uses by default."""
+
+GAUSSIAN_KSIZE = 5
+"""Kernel size (odd) for the gaussian denoise option."""
+
+MEDIAN_KSIZE = 3
+"""Kernel size (odd) for the median denoise option."""
+
 # --- M4 binarisation ---
 
 # --- M5 table detection ---

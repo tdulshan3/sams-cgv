@@ -7,7 +7,10 @@ dies on this output — see ``BUILD_SPEC.md`` section 9.3.
 
 from __future__ import annotations
 
+import cv2
 import numpy as np
+
+from src.config import GAUSSIAN_KSIZE, MEDIAN_KSIZE
 
 
 def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
@@ -58,3 +61,27 @@ def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
         raise ValueError(f"unknown greyscale method {method!r}")
 
     return np.clip(grey, 0, 255).astype(np.uint8)
+
+
+def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
+    """Suppress sensor and paper-texture noise ahead of thresholding.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"gaussian"`` | ``"median"`` | ``"bilateral"`` | ``"nlmeans"``.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``.
+
+    Raises:
+        ValueError: ``method`` is not one of the four above.
+    """
+    if method == "gaussian":
+        # Blurs everything uniformly, edges included — fine for the sensor's
+        # gaussian noise floor, but it also softens pen strokes.
+        return cv2.GaussianBlur(grey, (GAUSSIAN_KSIZE, GAUSSIAN_KSIZE), 0)
+    if method == "median":
+        # Replaces each pixel with the median of its neighbourhood. Removes
+        # salt-and-pepper style outliers that a gaussian blur only smears.
+        return cv2.medianBlur(grey, MEDIAN_KSIZE)
+    raise ValueError(f"unknown denoise method {method!r}")
