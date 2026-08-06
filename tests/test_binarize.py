@@ -112,6 +112,24 @@ def test_otsu_on_a_flat_image_does_not_crash():
     assert set(np.unique(binary).tolist()) <= {0, 255}
 
 
+def test_sauvola_ink_coverage_stays_sane_on_a_mostly_blank_page():
+    """Regression: Sauvola's dynamic range must be passed explicitly.
+
+    Inferred from a float array's dtype limits it becomes 1.0 instead of
+    ~128, the local threshold lands near 1000 on 0-255 data, and every
+    pixel falls below it — a blank page comes out 97% ink. A signing sheet
+    is a few percent ink, so anything near total coverage is the bug back.
+    """
+    page = np.full((200, 200), 230, dtype=np.uint8)
+    page[90:100, 20:180] = 40                 # a single stroke
+
+    binary = threshold_sauvola(page)
+    ink_percent = 100.0 * np.count_nonzero(binary) / binary.size
+
+    assert ink_percent < 20.0, f"sauvola marked {ink_percent:.0f}% of a blank page as ink"
+    assert binary[95, 100] == 255, "the stroke itself should still be ink"
+
+
 # -- morphology ------------------------------------------------------------
 
 
