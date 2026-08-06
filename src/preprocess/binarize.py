@@ -13,6 +13,8 @@ keeps it.
 
 from __future__ import annotations
 
+import time
+
 import cv2
 import numpy as np
 from skimage.filters import threshold_sauvola as _sk_threshold_sauvola
@@ -182,3 +184,82 @@ def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndar
 
     local_threshold = _sk_threshold_sauvola(grey.astype(np.float64), window_size=window)
     return np.where(grey.astype(np.float64) < local_threshold, 255, 0).astype(np.uint8)
+
+
+def line_survival_ratio(binary: np.ndarray, min_len_ratio: float = 0.5) -> float:
+    """Estimate whether long, unbroken horizontal runs of ink survive in
+    ``binary`` — the printed table lines M5 has to find next.
+
+    M5 has not landed yet, so there is no real line detector to ask "did
+    this method keep your lines?" against. This is a stand-in that measures
+    the same thing a wide horizontal morphological opening would find: it
+    keeps only ink that forms a run at least ``min_len_ratio`` of the image
+    width, then reports the widest surviving row as a fraction of the full
+    width. A real table line should score close to 1.0; noise and short pen
+    strokes score close to 0.0.
+
+    Read this next to ``ink_percent`` — not alone. Heavy morphological
+    closing can weld disconnected ink into a long run and inflate this
+    number while also gluing a signature to the table border, which is
+    exactly the failure mode T6 warns about.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        min_len_ratio: Minimum run length, as a fraction of image width, to
+            count as a candidate line.
+
+    Returns:
+        Fraction in ``[0, 1]``: widest surviving horizontal run over image
+        width.
+    """
+    width = binary.shape[1]
+    kernel_length = max(1, int(width * min_len_ratio))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_length, 1))
+    long_runs = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    if not long_runs.any():
+        return 0.0
+    row_coverage = long_runs.sum(axis=1) / 255.0
+    return float(row_coverage.max() / width)
+
+
+def compare_methods(grey: np.ndarray) -> list[dict]:
+    """Run all four thresholding methods on the same image and measure each.
+
+    T5 asks for a measured comparison, not a claim about which one "looks
+    best". Per method: ink percentage (should be a few percent of the page,
+    not 40), connected component count (fewer specks is cleaner), the line
+    survival estimate above, and wall-clock runtime.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        One dict per method — keys ``method``, ``binary``, ``ink_percent``,
+        ``components``, ``line_survival``, ``runtime_s`` — in the order
+        global, otsu, adaptive, sauvola.
+    """
+    methods = {
+        "global": lambda g: threshold_global(g),
+        "otsu": lambda g: threshold_otsu(g)[0],
+        "adaptive": lambda g: threshold_adaptive(g),
+        "sauvola": lambda g: threshold_sauvola(g),
+    }
+
+    results = []
+    for name, apply_method in methods.items():
+        started = time.perf_counter()
+        binary = apply_method(grey)
+        elapsed = time.perf_counter() - started
+
+        n_labels, _ = cv2.connectedComponents(binary)
+        results.append(
+            {
+                "method": name,
+                "binary": binary,
+                "ink_percent": 100.0 * np.count_nonzero(binary) / binary.size,
+                "components": n_labels - 1,  # label 0 is the background
+                "line_survival": line_survival_ratio(binary),
+                "runtime_s": elapsed,
+            }
+        )
+    return results
