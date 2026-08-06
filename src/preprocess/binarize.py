@@ -134,6 +134,11 @@ def threshold_adaptive(
         ValueError: ``block`` is even or smaller than 3, or ``method`` is
             not one of the two above.
     """
+    if block < 3:
+        raise ValueError(f"block must be at least 3, got {block}")
+    if block % 2 == 0:
+        raise ValueError(f"block must be odd, got {block}")
+
     if method == "mean":
         adaptive_method = cv2.ADAPTIVE_THRESH_MEAN_C
     elif method == "gaussian":
