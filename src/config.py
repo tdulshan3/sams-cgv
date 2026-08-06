@@ -179,9 +179,22 @@ MORPH_OPEN_K, MORPH_CLOSE_K = 2, 3
 """Opening and closing kernel sizes for ``morph_clean``.
 
 Opening removes speckle, closing repairs broken pen strokes. Both are kept
-deliberately small: a closing kernel large enough to bridge a wide pen skip
-is also large enough to weld a signature onto the printed table border,
-which would hand M6 a signature that is partly table line."""
+deliberately small, and the sweep over all five sheets (T6) shows why. As
+the closing kernel grows, component count collapses while ink coverage
+climbs:
+
+    open/close   ink %   components
+        2 / 3     8.78          381
+        2 / 5     8.96          287
+        3 / 7     9.38          174
+
+Falling components with *rising* ink is not cleaning — it is separate
+objects being welded into one. By kernel 7 more than half the components on
+the page have merged into a neighbour, and on a signing sheet the nearest
+neighbour of a signature is the printed table border it sits against. M6
+would then measure a signature that is partly table line. At 2/3 the
+component count drops (402 -> 381) with ink essentially unchanged, which is
+speckle genuinely being removed rather than strokes being fused."""
 
 SIG_MORPH_OPEN_K, SIG_MORPH_CLOSE_K = 2, 2
 """Kernel sizes for ``clean_signature_crop``, M8's small-crop variant.
