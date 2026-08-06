@@ -135,6 +135,81 @@ default of 2.0."""
 
 # --- M4 binarisation ---
 
+BINARIZE_METHOD = "adaptive"
+"""Which thresholding method ``BinarizeStage`` uses: ``global`` | ``otsu`` |
+``adaptive`` | ``sauvola``. See the T5 comparison in ``docs/contrib_m4.md``
+for the measurements behind this choice."""
+
+THRESHOLD_GLOBAL_VALUE = 127
+"""Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
+exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
+
+ADAPTIVE_BLOCK, ADAPTIVE_C = 41, 12
+"""``threshold_adaptive`` neighbourhood size (must be odd) and constant
+subtracted from the local mean/gaussian before comparing.
+
+Swept block 15-51 against c 5-15 on all five sheets (T3). The result is a
+broad plateau rather than a sharp optimum — across the whole grid ink
+coverage moves only between 7.6% and 10.0% — so these two numbers are
+chosen to avoid the edges of that plateau rather than to chase a peak:
+
+- ``c = 5`` is a cliff, not a slope: component count jumps from ~400 to
+  ~1100 as paper texture starts crossing the threshold. Anything from 8
+  upward is stable, and 12 sits comfortably clear of the cliff.
+- Larger blocks preserve the thin printed table lines slightly better,
+  because a thin dark line contrasts more strongly against a wider bright
+  neighbourhood. Below block 21 line survival starts dropping. 41 keeps
+  that margin without drifting so wide that the threshold stops being
+  local and starts behaving globally.
+"""
+
+SAUVOLA_WINDOW = 25
+"""``threshold_sauvola`` local neighbourhood size, must be odd."""
+
+SAUVOLA_K, SAUVOLA_R = 0.2, 128.0
+"""Sauvola's ``k`` (how strongly local contrast pulls the threshold away from
+the local mean) and ``r`` (the dynamic range of the data).
+
+``r`` must be passed explicitly. Left to infer it, scikit-image takes it from
+the array's dtype limits, and for a float array those are ``(-1, 1)`` — so
+``r`` becomes 1.0 rather than ~128, the local threshold lands around 1000 on
+0-255 data, and every pixel falls below it. The whole page comes out as ink."""
+
+MORPH_OPEN_K, MORPH_CLOSE_K = 2, 3
+"""Opening and closing kernel sizes for ``morph_clean``.
+
+Opening removes speckle, closing repairs broken pen strokes. Both are kept
+deliberately small, and the sweep over all five sheets (T6) shows why. As
+the closing kernel grows, component count collapses while ink coverage
+climbs:
+
+    open/close   ink %   components
+        2 / 3     8.78          381
+        2 / 5     8.96          287
+        3 / 7     9.38          174
+
+Falling components with *rising* ink is not cleaning — it is separate
+objects being welded into one. By kernel 7 more than half the components on
+the page have merged into a neighbour, and on a signing sheet the nearest
+neighbour of a signature is the printed table border it sits against. M6
+would then measure a signature that is partly table line. At 2/3 the
+component count drops (402 -> 381) with ink essentially unchanged, which is
+speckle genuinely being removed rather than strokes being fused."""
+
+SIG_MORPH_OPEN_K, SIG_MORPH_CLOSE_K = 2, 2
+"""Kernel sizes for ``clean_signature_crop``, M8's small-crop variant.
+
+Smaller than the whole-sheet pair above. The sheet kernels are sized against
+a 1600-pixel-wide page; applied to a signature crop a couple of hundred
+pixels across they erode a thin ballpoint stroke away entirely."""
+
+MORPH_KERNEL_SHAPE = "ellipse"
+"""Structuring element shape: ``ellipse`` | ``rect`` | ``cross``.
+
+Ellipse approximates the rounded disc a ballpoint actually lays down, so it
+erodes strokes evenly rather than squaring off their ends the way a
+rectangle does."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---
