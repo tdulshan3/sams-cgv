@@ -111,6 +111,10 @@ BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE = 9, 75, 75
 """``cv2.bilateralFilter`` parameters: neighbourhood diameter, colour sigma,
 space sigma."""
 
+NLMEANS_H = 10
+"""``cv2.fastNlMeansDenoising`` filter strength. OpenCV's own default of 3 is
+too weak to touch the noise levels seen on the phone photos."""
+
 SHADOW_KERNEL = 25
 """Morphological kernel size used to estimate the background lighting map."""
 

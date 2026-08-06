@@ -21,6 +21,7 @@ from src.config import (
     GAUSSIAN_KSIZE,
     GREY_METHOD,
     MEDIAN_KSIZE,
+    NLMEANS_H,
     SHADOW_KERNEL,
 )
 from src.utils.stage import Stage
@@ -108,7 +109,7 @@ def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
         # Averages every pixel against similar-looking patches across the
         # whole image rather than just its local neighbourhood. Strong noise
         # removal, but the slowest of the four by a wide margin.
-        return cv2.fastNlMeansDenoising(grey)
+        return cv2.fastNlMeansDenoising(grey, h=NLMEANS_H)
     raise ValueError(f"unknown denoise method {method!r}")
 
 
