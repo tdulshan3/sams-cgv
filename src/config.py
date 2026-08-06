@@ -154,6 +154,13 @@ deliberately small: a closing kernel large enough to bridge a wide pen skip
 is also large enough to weld a signature onto the printed table border,
 which would hand M6 a signature that is partly table line."""
 
+MORPH_KERNEL_SHAPE = "ellipse"
+"""Structuring element shape: ``ellipse`` | ``rect`` | ``cross``.
+
+Ellipse approximates the rounded disc a ballpoint actually lays down, so it
+erodes strokes evenly rather than squaring off their ends the way a
+rectangle does."""
+
 # --- M5 table detection ---
 
 # --- M6 ink segmentation ---

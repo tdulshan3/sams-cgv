@@ -23,11 +23,47 @@ from src.config import (
     ADAPTIVE_BLOCK,
     ADAPTIVE_C,
     MORPH_CLOSE_K,
+    MORPH_KERNEL_SHAPE,
     MORPH_OPEN_K,
     SAUVOLA_WINDOW,
     THRESHOLD_GLOBAL_VALUE,
 )
 from src.utils.stage import Stage
+
+_KERNEL_SHAPES = {
+    "ellipse": cv2.MORPH_ELLIPSE,
+    "rect": cv2.MORPH_RECT,
+    "cross": cv2.MORPH_CROSS,
+}
+"""Structuring element shapes ``morph_open``/``morph_close`` can be built from.
+
+The shape decides *which* neighbours count as adjacent, and that changes what
+survives. A rectangle treats diagonal and orthogonal neighbours alike, so it
+is the most aggressive and squares off the rounded ends of pen strokes. An
+ellipse approximates a disc, which matches the shape a ballpoint actually
+lays down. A cross only reaches along the two axes, so it is the gentlest
+and barely touches diagonal strokes.
+"""
+
+
+def structuring_element(shape: str, size: int) -> np.ndarray:
+    """Build a ``size`` x ``size`` structuring element of the named shape.
+
+    Args:
+        shape: ``"ellipse"`` | ``"rect"`` | ``"cross"``.
+        size: Side length in pixels.
+
+    Returns:
+        The kernel, as ``cv2.getStructuringElement`` produces it.
+
+    Raises:
+        ValueError: ``shape`` is not one of the three above.
+    """
+    if shape not in _KERNEL_SHAPES:
+        raise ValueError(
+            f"unknown kernel shape {shape!r}, expected one of {sorted(_KERNEL_SHAPES)}"
+        )
+    return cv2.getStructuringElement(_KERNEL_SHAPES[shape], (size, size))
 
 
 def threshold_global(grey: np.ndarray, value: int = THRESHOLD_GLOBAL_VALUE) -> np.ndarray:
@@ -229,7 +265,11 @@ def line_survival_ratio(binary: np.ndarray, min_len_ratio: float = 0.5) -> float
     return float(row_coverage.max() / width)
 
 
-def morph_open(binary: np.ndarray, kernel_size: int = MORPH_OPEN_K) -> np.ndarray:
+def morph_open(
+    binary: np.ndarray,
+    kernel_size: int = MORPH_OPEN_K,
+    shape: str = MORPH_KERNEL_SHAPE,
+) -> np.ndarray:
     """Morphological opening: erode then dilate.
 
     Erosion deletes any ink blob smaller than the kernel — the isolated
@@ -237,25 +277,27 @@ def morph_open(binary: np.ndarray, kernel_size: int = MORPH_OPEN_K) -> np.ndarra
     thresholding. Dilation then restores every surviving stroke to its
     original thickness. Net effect: specks gone, real ink unchanged.
 
-    Uses an elliptical kernel: pen strokes are rounded, and a round kernel
-    erodes them evenly instead of squaring off their ends the way
-    ``MORPH_RECT`` does.
-
     Args:
         binary: 2-D ``uint8`` image, ink = 255.
         kernel_size: Side of the structuring element in pixels. A size of
             0 or 1 is a no-op, returned unchanged.
+        shape: Structuring element shape, see :func:`structuring_element`.
 
     Returns:
         2-D ``uint8`` array, same shape, still strictly two-valued.
     """
     if kernel_size <= 1:
         return binary
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    return cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    return cv2.morphologyEx(
+        binary, cv2.MORPH_OPEN, structuring_element(shape, kernel_size)
+    )
 
 
-def morph_close(binary: np.ndarray, kernel_size: int = MORPH_CLOSE_K) -> np.ndarray:
+def morph_close(
+    binary: np.ndarray,
+    kernel_size: int = MORPH_CLOSE_K,
+    shape: str = MORPH_KERNEL_SHAPE,
+) -> np.ndarray:
     """Morphological closing: dilate then erode.
 
     Dilation grows every stroke outward, so a hairline gap where the pen
@@ -272,20 +314,23 @@ def morph_close(binary: np.ndarray, kernel_size: int = MORPH_CLOSE_K) -> np.ndar
         binary: 2-D ``uint8`` image, ink = 255.
         kernel_size: Side of the structuring element in pixels. A size of
             0 or 1 is a no-op, returned unchanged.
+        shape: Structuring element shape, see :func:`structuring_element`.
 
     Returns:
         2-D ``uint8`` array, same shape, still strictly two-valued.
     """
     if kernel_size <= 1:
         return binary
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    return cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+    return cv2.morphologyEx(
+        binary, cv2.MORPH_CLOSE, structuring_element(shape, kernel_size)
+    )
 
 
 def morph_clean(
     binary: np.ndarray,
     open_k: int = MORPH_OPEN_K,
     close_k: int = MORPH_CLOSE_K,
+    shape: str = MORPH_KERNEL_SHAPE,
 ) -> np.ndarray:
     """The full clean-up: opening first (kill specks), closing second
     (repair strokes).
@@ -298,11 +343,12 @@ def morph_clean(
         binary: 2-D ``uint8`` image, ink = 255.
         open_k: Opening kernel size, see :func:`morph_open`.
         close_k: Closing kernel size, see :func:`morph_close`.
+        shape: Structuring element shape, see :func:`structuring_element`.
 
     Returns:
         2-D ``uint8`` array, same shape, still strictly two-valued.
     """
-    return morph_close(morph_open(binary, open_k), close_k)
+    return morph_close(morph_open(binary, open_k, shape), close_k, shape)
 
 
 def compare_methods(grey: np.ndarray) -> list[dict]:
