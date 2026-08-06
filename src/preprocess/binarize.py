@@ -18,6 +18,7 @@ import time
 import cv2
 import numpy as np
 from skimage.filters import threshold_sauvola as _sk_threshold_sauvola
+from skimage.morphology import skeletonize as _sk_skeletonize
 
 from src.config import (
     ADAPTIVE_BLOCK,
@@ -227,6 +228,31 @@ def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndar
 
     local_threshold = _sk_threshold_sauvola(grey.astype(np.float64), window_size=window)
     return np.where(grey.astype(np.float64) < local_threshold, 255, 0).astype(np.uint8)
+
+
+def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
+    """Thin every ink stroke down to a one-pixel-wide centre line.
+
+    Repeatedly peels boundary pixels off each stroke while preserving its
+    connectivity, so what is left is the stroke's topological skeleton: the
+    same shape and the same number of branches, one pixel thick.
+
+    This is what makes *stroke length* measurable. Counting raw ink pixels
+    conflates a long thin stroke with a short fat one — press harder with
+    the same pen and the pixel count rises without a single extra
+    centimetre of writing. Counting skeleton pixels measures the path the
+    pen actually travelled, independent of how heavily it was pressed,
+    which is why M6's ``stroke_length`` feature and M8's matching both read
+    this rather than the raw mask.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+
+    Returns:
+        2-D ``uint8`` array, same shape, ink = 255 — polarity preserved.
+    """
+    skeleton = _sk_skeletonize(binary > 0)
+    return (skeleton.astype(np.uint8)) * 255
 
 
 def line_survival_ratio(binary: np.ndarray, min_len_ratio: float = 0.5) -> float:
