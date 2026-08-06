@@ -90,6 +90,9 @@ BORDER_TRIM_PX = 6
 
 # --- M3 enhancement ---
 
+GREY_METHOD = "luminosity"
+"""Which of ``to_grey``'s four methods ``EnhanceStage`` uses by default."""
+
 # --- M4 binarisation ---
 
 # --- M5 table detection ---
