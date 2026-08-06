@@ -121,3 +121,16 @@ def estimate_background(grey: np.ndarray) -> np.ndarray:
     dilated = cv2.dilate(grey, kernel)
     ksize = SHADOW_KERNEL if SHADOW_KERNEL % 2 == 1 else SHADOW_KERNEL + 1
     return cv2.medianBlur(dilated, ksize)
+
+
+def remove_shadow(grey: np.ndarray) -> np.ndarray:
+    """Flatten uneven lighting so a corner shadow does not skew thresholding.
+
+    Dividing the page by its own lighting map cancels the shadow out: a pixel
+    that is dim only because it sits in shadow reads close to 1.0 (its own
+    brightness over the background's, which is dim there too), while ink
+    stays dark relative to the paper around it either way.
+    """
+    background = estimate_background(grey)
+    ratio = grey.astype(np.float64) / (background.astype(np.float64) + 1e-6)
+    return np.clip(ratio * 255.0, 0, 255).astype(np.uint8)
