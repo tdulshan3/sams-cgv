@@ -36,6 +36,14 @@ def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
         # Weighted by how sensitive the human eye is to each colour: most
         # sensitive to green, least to blue. Same weights as ITU-R BT.601.
         grey = 0.299 * r + 0.587 * g + 0.114 * b
+    elif method == "lightness":
+        # Midpoint of the brightest and dimmest channel. Ignores the middle
+        # channel entirely, so it is the least representative of the four.
+        grey = (np.maximum.reduce([r, g, b]) + np.minimum.reduce([r, g, b])) / 2.0
+    elif method == "max_channel":
+        # Whichever channel is brightest at that pixel. Cheap, and biased
+        # toward whatever the most saturated colour in the shot happens to be.
+        grey = np.maximum.reduce([r, g, b])
     else:
         raise ValueError(f"unknown greyscale method {method!r}")
 
