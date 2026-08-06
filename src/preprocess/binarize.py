@@ -27,6 +27,8 @@ from src.config import (
     MORPH_CLOSE_K,
     MORPH_KERNEL_SHAPE,
     MORPH_OPEN_K,
+    SAUVOLA_K,
+    SAUVOLA_R,
     SAUVOLA_WINDOW,
     SIG_MORPH_CLOSE_K,
     SIG_MORPH_OPEN_K,
@@ -232,8 +234,15 @@ def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndar
     if window % 2 == 0:
         raise ValueError(f"window must be odd, got {window}")
 
-    local_threshold = _sk_threshold_sauvola(grey.astype(np.float64), window_size=window)
-    return np.where(grey.astype(np.float64) < local_threshold, 255, 0).astype(np.uint8)
+    # `r` (the dynamic range in Sauvola's formula) must be passed explicitly.
+    # Left to infer it, scikit-image reads it from the array's dtype limits —
+    # and a float array's limits are (-1, 1), so r becomes 1.0 instead of ~128.
+    # The local threshold then comes out around 1000 on 0-255 data and every
+    # pixel falls below it, turning the whole page to ink.
+    local_threshold = _sk_threshold_sauvola(
+        grey, window_size=window, k=SAUVOLA_K, r=SAUVOLA_R
+    )
+    return np.where(grey < local_threshold, 255, 0).astype(np.uint8)
 
 
 def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
@@ -261,40 +270,52 @@ def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
     return (skeleton.astype(np.uint8)) * 255
 
 
-def line_survival_ratio(binary: np.ndarray, min_len_ratio: float = 0.5) -> float:
-    """Estimate whether long, unbroken horizontal runs of ink survive in
-    ``binary`` — the printed table lines M5 has to find next.
+def line_survival_ratio(binary: np.ndarray) -> float:
+    """Estimate whether the printed table lines survive thresholding, as the
+    longest unbroken horizontal run of ink over the image width.
 
     M5 has not landed yet, so there is no real line detector to ask "did
-    this method keep your lines?" against. This is a stand-in that measures
-    the same thing a wide horizontal morphological opening would find: it
-    keeps only ink that forms a run at least ``min_len_ratio`` of the image
-    width, then reports the widest surviving row as a fraction of the full
-    width. A real table line should score close to 1.0; noise and short pen
-    strokes score close to 0.0.
+    your lines survive?". This stands in for one. A method that keeps the
+    table borders intact leaves a long run behind; a method that shatters
+    them into dashes leaves only short ones.
 
-    Read this next to ``ink_percent`` — not alone. Heavy morphological
-    closing can weld disconnected ink into a long run and inflate this
-    number while also gluing a signature to the table border, which is
-    exactly the failure mode T6 warns about.
+    Measured as a longest *run* rather than by opening with a wide
+    horizontal kernel, because the sheets are photographed a couple of
+    degrees off square and M2's perspective warp is not yet reliable — a
+    strictly horizontal kernel finds nothing on a line that drifts
+    vertically as it crosses the page, which makes the metric read zero for
+    every method and discriminate between none of them.
+
+    Two caveats worth keeping in mind when reading the number:
+
+    - It is a **relative** measure. Every method sees the same skew, so
+      comparing methods on one image is fair; the absolute value is not
+      meaningful until the sheet is genuinely flat.
+    - Read it next to ``ink_percent``, never alone. Heavy closing can weld
+      separate ink into one long run and inflate this while also gluing a
+      signature to the table border — the exact failure T6 warns about.
 
     Args:
         binary: 2-D ``uint8`` image, ink = 255.
-        min_len_ratio: Minimum run length, as a fraction of image width, to
-            count as a candidate line.
 
     Returns:
-        Fraction in ``[0, 1]``: widest surviving horizontal run over image
-        width.
+        Fraction in ``[0, 1]``: longest horizontal ink run over image width.
     """
-    width = binary.shape[1]
-    kernel_length = max(1, int(width * min_len_ratio))
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_length, 1))
-    long_runs = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
-    if not long_runs.any():
+    height, width = binary.shape[:2]
+    if width == 0:
         return 0.0
-    row_coverage = long_runs.sum(axis=1) / 255.0
-    return float(row_coverage.max() / width)
+
+    is_ink = (binary > 0).astype(np.int8)
+    # Pad each row with a zero at both ends so every run has a rising and a
+    # falling edge, then read run lengths off the positions of those edges.
+    padded = np.zeros((height, width + 2), dtype=np.int8)
+    padded[:, 1:-1] = is_ink
+    longest = 0
+    for row in range(height):
+        edges = np.flatnonzero(np.diff(padded[row]))
+        if edges.size:
+            longest = max(longest, int(np.diff(edges)[::2].max()))
+    return longest / width
 
 
 def morph_open(

@@ -151,6 +151,15 @@ subtracted from the local mean/gaussian before comparing."""
 SAUVOLA_WINDOW = 25
 """``threshold_sauvola`` local neighbourhood size, must be odd."""
 
+SAUVOLA_K, SAUVOLA_R = 0.2, 128.0
+"""Sauvola's ``k`` (how strongly local contrast pulls the threshold away from
+the local mean) and ``r`` (the dynamic range of the data).
+
+``r`` must be passed explicitly. Left to infer it, scikit-image takes it from
+the array's dtype limits, and for a float array those are ``(-1, 1)`` — so
+``r`` becomes 1.0 rather than ~128, the local threshold lands around 1000 on
+0-255 data, and every pixel falls below it. The whole page comes out as ink."""
+
 MORPH_OPEN_K, MORPH_CLOSE_K = 2, 3
 """Opening and closing kernel sizes for ``morph_clean``.
 
