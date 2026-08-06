@@ -16,6 +16,7 @@ from src.config import (
     BILATERAL_SIGMA_SPACE,
     GAUSSIAN_KSIZE,
     MEDIAN_KSIZE,
+    SHADOW_KERNEL,
 )
 
 
@@ -103,3 +104,20 @@ def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
         # removal, but the slowest of the four by a wide margin.
         return cv2.fastNlMeansDenoising(grey)
     raise ValueError(f"unknown denoise method {method!r}")
+
+
+def estimate_background(grey: np.ndarray) -> np.ndarray:
+    """Estimate the sheet's lighting map: what the page would look like with
+    no ink on it.
+
+    Dilating with a kernel wider than any pen stroke erases the strokes,
+    leaving only the paper. A median blur then smooths what is left into a
+    slowly-varying lighting surface — bright where a shadow does not fall,
+    dim in the corner where it does.
+    """
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (SHADOW_KERNEL, SHADOW_KERNEL)
+    )
+    dilated = cv2.dilate(grey, kernel)
+    ksize = SHADOW_KERNEL if SHADOW_KERNEL % 2 == 1 else SHADOW_KERNEL + 1
+    return cv2.medianBlur(dilated, ksize)

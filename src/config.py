@@ -106,6 +106,9 @@ BILATERAL_D, BILATERAL_SIGMA_COLOR, BILATERAL_SIGMA_SPACE = 9, 75, 75
 """``cv2.bilateralFilter`` parameters: neighbourhood diameter, colour sigma,
 space sigma."""
 
+SHADOW_KERNEL = 25
+"""Morphological kernel size used to estimate the background lighting map."""
+
 # --- M4 binarisation ---
 
 # --- M5 table detection ---
