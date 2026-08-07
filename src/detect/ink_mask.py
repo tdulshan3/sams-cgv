@@ -254,6 +254,72 @@ def compute_stroke_bbox_and_aspect(
     return stroke_bbox, aspect
 
 
+def compute_stroke_length(mask: np.ndarray) -> int:
+    """Compute stroke length (pixel count of skeletonised ink mask).
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        Integer count of skeleton pixels.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return 0
+
+    from skimage.morphology import skeletonize
+
+    binary_mask = mask > 0
+    skeleton = skeletonize(binary_mask)
+    return int(np.count_nonzero(skeleton))
+
+
+def compute_filled_ratio(mask: np.ndarray, bbox: tuple[int, int, int, int] | None) -> float:
+    """Compute filled ratio (ink pixels divided by bounding box area).
+
+    Signatures are sparse (low fill ratio), smudges/blocks are dense (high fill ratio).
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+        bbox: Bounding box tuple (x, y, w, h) or None.
+
+    Returns:
+        Float filled ratio in [0.0, 1.0].
+    """
+    if mask is None or bbox is None:
+        return 0.0
+
+    _, _, w, h = bbox
+    bbox_area = w * h
+    if bbox_area <= 0:
+        return 0.0
+
+    ink_pixels = np.count_nonzero(mask)
+    return float(ink_pixels / bbox_area)
+
+
+def compute_centroid_offset(mask: np.ndarray) -> float:
+    """Compute Euclidean distance between ink centroid and cell center.
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        Distance in pixels.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return 0.0
+
+    y_indices, x_indices = np.where(mask > 0)
+    cx = float(np.mean(x_indices))
+    cy = float(np.mean(y_indices))
+
+    h, w = mask.shape[:2]
+    cell_cx = w / 2.0
+    cell_cy = h / 2.0
+
+    return float(np.sqrt((cx - cell_cx) ** 2 + (cy - cell_cy) ** 2))
+
+
 def ink_features(mask: np.ndarray) -> dict:
     """Extract ink features for decision stage (M7).
 
@@ -278,16 +344,20 @@ def ink_features(mask: np.ndarray) -> dict:
     ratio = compute_ink_ratio(mask)
     num_comps = count_components(mask)
     bbox, aspect = compute_stroke_bbox_and_aspect(mask)
+    skel_len = compute_stroke_length(mask)
+    fill_ratio = compute_filled_ratio(mask, bbox)
+    c_offset = compute_centroid_offset(mask)
 
     return {
         "ink_ratio": ratio,
         "components": num_comps,
         "stroke_bbox": bbox,
         "aspect": aspect,
-        "stroke_length": 0,
-        "filled_ratio": 0.0,
-        "centroid_offset": 0.0,
+        "stroke_length": skel_len,
+        "filled_ratio": fill_ratio,
+        "centroid_offset": c_offset,
     }
+
 
 
 

@@ -281,6 +281,22 @@ def test_ink_features_bbox_aspect():
     assert feats["aspect"] == pytest.approx(80 / 20)  # 4.0
 
 
+def test_ink_features_skeleton_fill():
+    """Verify stroke_length, filled_ratio and centroid_offset feature extraction."""
+    from src.detect.ink_mask import ink_features
+
+    mask = np.zeros((100, 100), dtype=np.uint8)
+
+    # 10x10 square of ink centered at (45..55, 45..55)
+    mask[45:55, 45:55] = 255
+
+    feats = ink_features(mask)
+    assert feats["stroke_length"] > 0
+    assert feats["filled_ratio"] == pytest.approx(1.0)  # Solid 10x10 block fills 100% of its bbox
+    assert feats["centroid_offset"] == pytest.approx(0.5, abs=1.0)  # Centroid near center (50, 50)
+
+
+
 
 
 
