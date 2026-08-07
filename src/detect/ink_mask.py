@@ -10,6 +10,91 @@ import cv2
 import numpy as np
 
 from src import config
+from src.detect.cell_clean import remove_table_lines
+from src.models import Cell, InkResult, SheetMeta
+from src.utils.stage import Stage
+
+
+class InkStage(Stage):
+    """M6 — Cell Cleaning & Ink Segmentation Stage.
+
+    Reads ctx['cells'] (list[Cell] with BGR .image).
+    Writes ctx['ink'] -> list[InkResult], one per cell, in the same order.
+    Saves cell crop and mask to outputs/cells/<sheet_date>/row_<n>.png and row_<n>_mask.png.
+    Returns ctx.
+    """
+
+    name = "ink"
+
+    def __init__(self, method: str = config.INK_METHOD) -> None:
+        self.method = method
+        self._figures: dict[str, np.ndarray] = {}
+
+    def run(self, ctx: dict) -> dict:
+        """Run ink segmentation over all signature cells in context."""
+        cells: list[Cell] = ctx.get("cells", [])
+        sheet: SheetMeta | None = ctx.get("sheet")
+        sheet_date = sheet.date if sheet else "unknown"
+
+        ink_results: list[InkResult] = []
+        tiles: list[np.ndarray] = []
+
+        for cell in cells:
+            if cell.image is None or cell.image.size == 0:
+                result = InkResult(cell=cell)
+                ink_results.append(result)
+                continue
+
+            # 1. Erase leftover printed border lines
+            cleaned_bgr = remove_table_lines(cell.image)
+
+            # 2. Segment ink mask
+            mask = ink_mask(cleaned_bgr, method=self.method)
+
+            # 3. Compute ink features
+            feats = ink_features(mask)
+
+            # 4. Save cell crop and mask to disk for M8
+            crop_path, mask_path = save_cell_outputs(sheet_date, cell.row, cleaned_bgr, mask)
+
+            # 5. Build InkResult
+            res = InkResult(
+                cell=cell,
+                mask=mask,
+                ink_ratio=feats["ink_ratio"],
+                components=feats["components"],
+                stroke_bbox=feats["stroke_bbox"],
+                aspect=feats["aspect"],
+                stroke_length=feats["stroke_length"],
+                crop_path=crop_path,
+                mask_path=mask_path,
+            )
+            ink_results.append(res)
+
+            # Create side-by-side tile for montage figure (crop | mask)
+            mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+            tile = np.hstack([cleaned_bgr, mask_bgr])
+            tiles.append(tile)
+
+        ctx["ink"] = ink_results
+
+        if tiles:
+            # Build montage of cell crops and masks
+            max_w = max(t.shape[1] for t in tiles)
+            resized = []
+            for t in tiles:
+                h, w = t.shape[:2]
+                if w != max_w:
+                    t = cv2.resize(t, (max_w, max(1, int(h * max_w / w))))
+                resized.append(t)
+            self._figures["ink_segmentation"] = np.vstack(resized)
+
+        return ctx
+
+    def figures(self) -> dict[str, np.ndarray]:
+        """Return montage figure of signature cells and their masks."""
+        return self._figures
+
 
 
 def ink_mask_saturation(cell_bgr: np.ndarray, sat_min: int = config.SAT_MIN) -> np.ndarray:

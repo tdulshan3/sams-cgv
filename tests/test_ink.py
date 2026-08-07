@@ -317,6 +317,43 @@ def test_save_cell_outputs(tmp_path, monkeypatch):
     assert "row_0_mask.png" in mask_path_str
 
 
+def test_ink_stage():
+    """Verify InkStage runs over context cell list, returns InkResults, and produces montage figures."""
+    from pathlib import Path
+
+    from src.detect.ink_mask import InkStage
+    from src.models import Cell, SheetMeta
+
+
+    stage = InkStage()
+    assert stage.name == "ink"
+
+    # Create dummy cell with BGR image
+    cell_img = np.full((40, 80, 3), 240, dtype=np.uint8)
+    cell_img[10:30, 20:60] = [220, 40, 20]  # Blue stroke
+
+    cell = Cell(row=0, col=4, bbox=(10, 10, 80, 40), image=cell_img)
+    sheet = SheetMeta(path=Path("data/sheets/12.07.2019.png"), date="12.07.2019")
+
+    ctx = {"cells": [cell], "sheet": sheet}
+
+    res_ctx = stage.run(ctx)
+
+    assert "ink" in res_ctx
+    ink_list = res_ctx["ink"]
+    assert len(ink_list) == 1
+
+    ink_res = ink_list[0]
+    assert ink_res.ink_ratio > 0
+    assert ink_res.components >= 1
+    assert ink_res.mask is not None
+
+    figs = stage.figures()
+    assert "ink_segmentation" in figs
+    assert isinstance(figs["ink_segmentation"], np.ndarray)
+
+
+
 
 
 
