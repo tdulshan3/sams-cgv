@@ -47,17 +47,31 @@ def find_sheet_corners(bgr: np.ndarray) -> np.ndarray | None:
     if not contours:
         return None
         
-    largest_contour = max(contours, key=cv2.contourArea)
-    perimeter = cv2.arcLength(largest_contour, True)
-    
-    # Tolerance loop starting near 0.02 * perimeter to find exactly 4 points
-    for factor in np.linspace(0.01, 0.1, 100):
-        epsilon = factor * perimeter
-        approx = cv2.approxPolyDP(largest_contour, epsilon, True)
-        
-        if len(approx) == 4:
-            return approx.reshape((4, 2)).astype(np.float32)
-            
+    full_area = bgr.shape[0] * bgr.shape[1]
+
+    # Largest first, so the page outline is tried before anything inside it.
+    for contour in sorted(contours, key=cv2.contourArea, reverse=True):
+        perimeter = cv2.arcLength(contour, True)
+
+        # Tolerance loop starting near 0.02 * perimeter to find exactly 4 points
+        for factor in np.linspace(0.01, 0.1, 100):
+            epsilon = factor * perimeter
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+
+            if len(approx) == 4:
+                # Reject anything too small to be the sheet. Without this the
+                # first four-sided thing found wins, which on these photos is
+                # the student table or a fragment of it — the warp then crops
+                # to a sliver and every later stage sees almost nothing.
+                if cv2.contourArea(approx) / full_area >= MIN_SHEET_AREA_RATIO:
+                    pts = approx.reshape((4, 2)).astype(np.float32)
+                    # approxPolyDP returns the corners in traversal order, which
+                    # may start anywhere and run either way round. four_point_warp
+                    # unpacks them as tl, tr, br, bl, so they have to be sorted
+                    # first or the transform mirrors the sheet.
+                    return _order_points(pts)
+                break
+
     return None
 
 
