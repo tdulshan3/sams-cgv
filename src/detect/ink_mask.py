@@ -194,7 +194,74 @@ def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np
 
 
 
+def compute_ink_ratio(mask: np.ndarray) -> float:
+    """Compute ratio of ink pixels to total cell pixels.
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        Float in range [0.0, 1.0].
+    """
+    if mask is None or mask.size == 0:
+        return 0.0
+    ink_pixels = np.count_nonzero(mask)
+    total_pixels = mask.size
+    return float(ink_pixels / total_pixels)
+
+
+def count_components(mask: np.ndarray) -> int:
+    """Count connected components in cleaned mask (excluding background).
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        Integer count of blobs.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return 0
+    num_labels, _ = cv2.connectedComponents(mask, connectivity=8)
+    return max(0, num_labels - 1)
+
+
+def ink_features(mask: np.ndarray) -> dict:
+    """Extract ink features for decision stage (M7).
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        Dictionary containing ink_ratio, components, and placeholders for
+        subsequent feature computations.
+    """
+    if mask is None or mask.size == 0:
+        return {
+            "ink_ratio": 0.0,
+            "components": 0,
+            "stroke_bbox": None,
+            "aspect": 0.0,
+            "stroke_length": 0,
+            "filled_ratio": 0.0,
+            "centroid_offset": 0.0,
+        }
+
+    ratio = compute_ink_ratio(mask)
+    num_comps = count_components(mask)
+
+    return {
+        "ink_ratio": ratio,
+        "components": num_comps,
+        "stroke_bbox": None,
+        "aspect": 0.0,
+        "stroke_length": 0,
+        "filled_ratio": 0.0,
+        "centroid_offset": 0.0,
+    }
+
+
 def count_pen_colours(cells_bgr: list[np.ndarray], masks: list[np.ndarray]) -> dict[str, int]:
+
     """Count pen colour usage across all signature cells on a sheet.
 
     Args:

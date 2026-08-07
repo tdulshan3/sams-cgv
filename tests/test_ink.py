@@ -250,6 +250,25 @@ def test_count_pen_colours():
     assert counts["green"] == 0
 
 
+def test_ink_features_basic():
+    """Verify synthetic blank cell gives ink_ratio == 0 and components == 0, and stroke cell gives ratio > 0."""
+    from src.detect.ink_mask import ink_features
+
+    # 1. Blank cell mask
+    blank_mask = np.zeros((50, 100), dtype=np.uint8)
+    feats_blank = ink_features(blank_mask)
+    assert feats_blank["ink_ratio"] == 0.0
+    assert feats_blank["components"] == 0
+
+    # 2. Stroke cell mask (50x100 = 5000 pixels, stroke is 10x20 = 200 pixels)
+    stroke_mask = np.zeros((50, 100), dtype=np.uint8)
+    stroke_mask[20:30, 40:60] = 255
+    feats_stroke = ink_features(stroke_mask)
+    assert feats_stroke["ink_ratio"] == pytest.approx(200 / 5000)
+    assert feats_stroke["components"] == 1
+
+
+
 
 
 
