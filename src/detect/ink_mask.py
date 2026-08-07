@@ -152,8 +152,28 @@ def filter_min_area(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> n
     return result
 
 
+def close_stroke_gaps(mask: np.ndarray, ksize: int = 3) -> np.ndarray:
+    """Perform small morphological closing to join broken pen strokes.
+
+    Uses a small ellipse kernel (3x3) to bridge minor gaps without inflating overall ink area.
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+        ksize: Size of the closing structuring element.
+
+    Returns:
+        uint8 mask with closed stroke gaps.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return mask
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
+    return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+
+
 def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np.ndarray:
-    """Clean ink mask by removing small specks and edge-touching artifacts.
+    """Clean ink mask by closing small stroke gaps and removing specks.
 
     Args:
         mask: uint8 binary mask (ink=255, background=0).
@@ -165,9 +185,13 @@ def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np
     if mask is None or mask.size == 0:
         return mask
 
+    # Close small broken gaps within pen strokes
+    closed = close_stroke_gaps(mask, ksize=3)
+
     # Drop small component specks below min_area
-    cleaned = filter_min_area(mask, min_area=min_area)
+    cleaned = filter_min_area(closed, min_area=min_area)
     return cleaned
+
 
 
 def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarray:

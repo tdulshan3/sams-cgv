@@ -175,6 +175,25 @@ def test_filter_min_area():
     assert np.count_nonzero(cleaned[30:40, 30:50]) == 200
 
 
+def test_close_stroke_gaps():
+    """Verify small 1-2 pixel breaks inside a pen stroke are joined by morphological closing."""
+    from src.detect.ink_mask import close_stroke_gaps
+
+    mask = np.zeros((50, 100), dtype=np.uint8)
+
+    # Stroke segment 1
+    mask[20:25, 20:40] = 255
+    # 1-pixel gap at col 40
+    # Stroke segment 2
+    mask[20:25, 41:60] = 255
+
+    closed = close_stroke_gaps(mask, ksize=3)
+
+    # The 1-pixel gap at col 40 should now be filled (255)
+    assert np.all(closed[20:25, 40] == 255)
+
+
+
 
 
 
