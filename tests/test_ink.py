@@ -353,6 +353,19 @@ def test_ink_stage():
     assert isinstance(figs["ink_segmentation"], np.ndarray)
 
 
+def test_faded_ink_detection():
+    """Verify lower saturation threshold (SAT_MIN=50) detects faint/faded ink strokes."""
+    from src.detect.ink_mask import ink_mask_saturation
+
+    cell = np.full((40, 60, 3), 245, dtype=np.uint8)
+    # Faded blue stroke with moderate saturation (~55)
+    cell[10:20, 10:40] = [200, 150, 140]
+
+    mask = ink_mask_saturation(cell, sat_min=50)
+    assert np.all(mask[10:20, 10:40] == 255)
+
+
+
 
 
 
