@@ -226,6 +226,31 @@ def test_dominant_pen_colour():
     assert dominant_pen_colour(cell_green, mask_green) == "green"
 
 
+def test_count_pen_colours():
+    """Verify count_pen_colours correctly tallies pen colour usage across multiple cells."""
+    from src.detect.ink_mask import count_pen_colours
+
+    cell_blue = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_blue[10:30, 10:50] = [220, 50, 20]
+    mask_blue = np.zeros((40, 60), dtype=np.uint8)
+    mask_blue[10:30, 10:50] = 255
+
+    cell_black = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_black[10:30, 10:50] = [40, 40, 40]
+    mask_black = np.zeros((40, 60), dtype=np.uint8)
+    mask_black[10:30, 10:50] = 255
+
+    cells = [cell_blue, cell_black, cell_blue]
+    masks = [mask_blue, mask_black, mask_blue]
+
+    counts = count_pen_colours(cells, masks)
+    assert counts["blue"] == 2
+    assert counts["black"] == 1
+    assert counts["red"] == 0
+    assert counts["green"] == 0
+
+
+
 
 
 

@@ -194,7 +194,32 @@ def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np
 
 
 
+def count_pen_colours(cells_bgr: list[np.ndarray], masks: list[np.ndarray]) -> dict[str, int]:
+    """Count pen colour usage across all signature cells on a sheet.
+
+    Args:
+        cells_bgr: List of cell BGR crop images.
+        masks: List of corresponding uint8 ink masks (same order).
+
+    Returns:
+        Dictionary mapping colour name ('blue', 'black', 'red', 'green', 'other')
+        to the count of cells using that pen colour.
+    """
+    counts = {"blue": 0, "black": 0, "red": 0, "green": 0, "other": 0}
+
+    for cell, mask in zip(cells_bgr, masks):
+        if cell is None or mask is None or not np.any(mask):
+            continue
+        # Only count colour if there is noticeable ink in the cell (> 10 ink pixels)
+        if np.count_nonzero(mask) >= config.MIN_BLOB_AREA:
+            colour = dominant_pen_colour(cell, mask)
+            counts[colour] = counts.get(colour, 0) + 1
+
+    return counts
+
+
 def dominant_pen_colour(cell_bgr: np.ndarray, mask: np.ndarray) -> str:
+
     """Identify the dominant pen colour used in a cell crop.
 
     Maps ink pixel hues through config.PEN_HUE_RANGES. If saturation is low,
