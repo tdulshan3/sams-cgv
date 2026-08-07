@@ -19,10 +19,12 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from src.config import (
+    BAND_GAP_THRESHOLD,
     EXPECTED_COLS,
     EXPECTED_DATA_ROWS,
     MIN_COL_WIDTH,
     MIN_ROW_HEIGHT,
+    ROW_SPACING_TOLERANCE,
 )
 from src.models import Cell
 from src.utils.logging import get_logger
@@ -100,7 +102,7 @@ class Grid:
         return result
 
 
-def _group_into_bands(ys: list[int], gap_threshold: int = 40) -> list[list[int]]:
+def _group_into_bands(ys: list[int], gap_threshold: int = BAND_GAP_THRESHOLD) -> list[list[int]]:
     """Split a flat list of Y positions into bands separated by large gaps.
 
     Each band becomes one candidate table.
@@ -136,7 +138,7 @@ def _merge_closer_than(values: list[int], min_gap: int) -> list[int]:
     return merged
 
 
-def longest_regular_run(ys: list[int], tolerance: float = 0.35) -> list[int]:
+def longest_regular_run(ys: list[int], tolerance: float = ROW_SPACING_TOLERANCE) -> list[int]:
     """Longest run of consecutive lines that are near-evenly spaced.
 
     Grouping the page's horizontal lines by a fixed pixel gap cannot separate

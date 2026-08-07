@@ -6,11 +6,18 @@ import cv2
 import numpy as np
 
 from src.config import (
-    CANNY_LOW,
-    CANNY_HIGH,
-    MIN_SHEET_AREA_RATIO,
-    MAX_SKEW_CORRECTION_DEG,
     BORDER_TRIM_PX,
+    CANNY_HIGH,
+    CANNY_LOW,
+    CORNER_EPSILON_MAX,
+    CORNER_EPSILON_MIN,
+    CORNER_EPSILON_STEPS,
+    MAX_SKEW_CORRECTION_DEG,
+    MIN_SHEET_AREA_RATIO,
+    SKEW_ANGLE_LIMIT_DEG,
+    SKEW_HOUGH_THRESHOLD,
+    SKEW_MAX_LINE_GAP,
+    SKEW_MIN_LINE_LENGTH,
 )
 from src.io.image_loader import load_image, resize_to_width
 from src.utils.cvcompat import hough_line_segments
@@ -55,7 +62,7 @@ def find_sheet_corners(bgr: np.ndarray) -> np.ndarray | None:
         perimeter = cv2.arcLength(contour, True)
 
         # Tolerance loop starting near 0.02 * perimeter to find exactly 4 points
-        for factor in np.linspace(0.01, 0.1, 100):
+        for factor in np.linspace(CORNER_EPSILON_MIN, CORNER_EPSILON_MAX, CORNER_EPSILON_STEPS):
             epsilon = factor * perimeter
             approx = cv2.approxPolyDP(contour, epsilon, True)
 
@@ -106,7 +113,12 @@ def four_point_warp(bgr: np.ndarray, corners: np.ndarray) -> np.ndarray:
 def estimate_skew_angle(grey: np.ndarray) -> float:
     """Small residual rotation in degrees, from Hough lines or minAreaRect."""
     edges = cv2.Canny(grey, CANNY_LOW, CANNY_HIGH)
-    lines = hough_line_segments(edges, threshold=100, min_line_length=50, max_line_gap=10)
+    lines = hough_line_segments(
+        edges,
+        threshold=SKEW_HOUGH_THRESHOLD,
+        min_line_length=SKEW_MIN_LINE_LENGTH,
+        max_line_gap=SKEW_MAX_LINE_GAP,
+    )
 
     angles = []
     for x1, y1, x2, y2 in lines:
@@ -119,7 +131,7 @@ def estimate_skew_angle(grey: np.ndarray) -> float:
             angle += 180
             
         # Filter for near-horizontal segments (+/- 30 degrees)
-        if -30.0 <= angle <= 30.0:
+        if -SKEW_ANGLE_LIMIT_DEG <= angle <= SKEW_ANGLE_LIMIT_DEG:
             angles.append(angle)
             
     if not angles:

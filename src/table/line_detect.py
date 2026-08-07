@@ -14,7 +14,17 @@ import cv2
 import numpy as np
 from scipy.signal import find_peaks
 
-from src.config import H_KERNEL_RATIO, LINE_MERGE_TOL, V_KERNEL_RATIO
+from src.config import (
+    H_KERNEL_RATIO,
+    HOUGH_ANGLE_TOL_DEG,
+    HOUGH_MAX_LINE_GAP,
+    HOUGH_MIN_LEN_RATIO,
+    HOUGH_THRESHOLD,
+    LINE_MERGE_TOL,
+    LINE_PEAK_RATIO,
+    PEAK_MIN_DISTANCE,
+    V_KERNEL_RATIO,
+)
 from src.utils.cvcompat import hough_line_segments
 from src.utils.logging import get_logger
 
@@ -46,7 +56,7 @@ def line_mask(binary: np.ndarray, orientation: str) -> np.ndarray:
     return dilated
 
 
-def _peaks_from_profile(profile: np.ndarray, min_distance: int = 5) -> list[int]:
+def _peaks_from_profile(profile: np.ndarray, min_distance: int = PEAK_MIN_DISTANCE) -> list[int]:
     """Find peaks in a 1-D projection profile.
 
     Args:
@@ -58,7 +68,7 @@ def _peaks_from_profile(profile: np.ndarray, min_distance: int = 5) -> list[int]
     """
     if profile.max() == 0:
         return []
-    threshold = profile.max() * 0.3
+    threshold = profile.max() * LINE_PEAK_RATIO
     peaks, _ = find_peaks(profile, height=threshold, distance=min_distance)
     return sorted(peaks.tolist())
 
@@ -95,7 +105,7 @@ def detect_horizontal_lines(binary: np.ndarray, min_len_ratio: float = 0.5) -> l
     """
     mask = line_mask(binary, "horizontal")
     profile = mask.sum(axis=1).astype(float)
-    peaks = _peaks_from_profile(profile, min_distance=5)
+    peaks = _peaks_from_profile(profile, min_distance=PEAK_MIN_DISTANCE)
     merged = _merge_nearby(peaks, LINE_MERGE_TOL)
     log.debug("horizontal lines detected: %s", merged)
     return merged
@@ -113,7 +123,7 @@ def detect_vertical_lines(binary: np.ndarray, min_len_ratio: float = 0.5) -> lis
     """
     mask = line_mask(binary, "vertical")
     profile = mask.sum(axis=0).astype(float)
-    peaks = _peaks_from_profile(profile, min_distance=5)
+    peaks = _peaks_from_profile(profile, min_distance=PEAK_MIN_DISTANCE)
     merged = _merge_nearby(peaks, LINE_MERGE_TOL)
     log.debug("vertical lines detected: %s", merged)
     return merged
@@ -127,12 +137,12 @@ def detect_lines_hough(binary: np.ndarray) -> tuple[list[int], list[int]]:
     Returns:
         Tuple of (y_positions, x_positions) for horizontal and vertical lines.
     """
-    angle_tol = np.deg2rad(5)
+    angle_tol = np.deg2rad(HOUGH_ANGLE_TOL_DEG)
     lines = hough_line_segments(
         binary,
-        threshold=80,
-        min_line_length=int(binary.shape[1] * 0.3),
-        max_line_gap=20,
+        threshold=HOUGH_THRESHOLD,
+        min_line_length=int(binary.shape[1] * HOUGH_MIN_LEN_RATIO),
+        max_line_gap=HOUGH_MAX_LINE_GAP,
     )
     h_ys: list[int] = []
     v_xs: list[int] = []

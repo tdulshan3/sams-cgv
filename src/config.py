@@ -88,6 +88,23 @@ MIN_SHEET_AREA_RATIO = 0.30
 MAX_SKEW_CORRECTION_DEG = 15.0
 BORDER_TRIM_PX = 6
 
+CORNER_EPSILON_MIN, CORNER_EPSILON_MAX, CORNER_EPSILON_STEPS = 0.01, 0.1, 100
+"""``approxPolyDP`` tolerance sweep, as a fraction of the contour perimeter.
+
+Widened until the outline simplifies to exactly four points."""
+
+SKEW_HOUGH_THRESHOLD = 100
+"""Votes a line needs before it counts towards the skew estimate."""
+
+SKEW_MIN_LINE_LENGTH, SKEW_MAX_LINE_GAP = 50, 10
+"""Shortest segment considered, and the largest break tolerated within one."""
+
+SKEW_ANGLE_LIMIT_DEG = 30.0
+"""Only segments within this of horizontal contribute to the skew median.
+
+Wider than the correction limit on purpose: a sheet tilted 10 degrees still
+has to be recognised as near-horizontal before it can be straightened."""
+
 # --- M3 enhancement ---
 #
 # Agreed final chain, tuned against Otsu binarisation on all five sheets
@@ -247,6 +264,40 @@ EXPECTED_COLS = 5
 
 EXPECTED_DATA_ROWS = 6
 """Every sheet has exactly 6 student rows (measured T0)."""
+
+LINE_PEAK_RATIO = 0.30
+"""Fraction of the tallest projection peak a line must reach to count."""
+
+PEAK_MIN_DISTANCE = 5
+"""Minimum samples between two peaks in a projection profile."""
+
+ROW_SPACING_TOLERANCE = 0.35
+"""How far a gap may sit from the run's median and still count as regular.
+
+The student table's header row is slightly shorter than a data row, so this
+cannot be tight. See ``longest_regular_run``."""
+
+BAND_GAP_THRESHOLD = 40
+"""Pixel gap that splits horizontal lines into candidate table bands.
+
+Retained for the two-tables report figure only. Table *selection* uses row
+regularity instead — on this sheet the rows are ~44 px apart and the gap above
+the table is ~64 px, so no single threshold separates them."""
+
+TABLE_SPAN_TOLERANCE = 12
+"""Slack, in pixels, when clipping column rules to the span of the row rules."""
+
+HOUGH_ANGLE_TOL_DEG = 5.0
+"""How far from axis-aligned a Hough segment may sit in the cross-check."""
+
+HOUGH_THRESHOLD = 80
+"""Votes a segment needs in the Hough cross-check."""
+
+HOUGH_MIN_LEN_RATIO = 0.30
+"""Shortest Hough segment kept, as a fraction of image width."""
+
+HOUGH_MAX_LINE_GAP = 20
+"""Largest break tolerated within one Hough segment."""
 
 
 # --- M6 ink segmentation ---

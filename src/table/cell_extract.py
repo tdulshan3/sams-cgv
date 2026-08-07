@@ -82,7 +82,7 @@ def _draw_two_tables(warped: np.ndarray, bands: list[list[int]]) -> np.ndarray:
 
 
 def _clip_to_table_width(
-    xs: list[int], band_h_mask: np.ndarray, tolerance: int = 12
+    xs: list[int], band_h_mask: np.ndarray, tolerance: int = config.TABLE_SPAN_TOLERANCE
 ) -> list[int]:
     """Drop vertical lines that fall outside the table's own width.
 
@@ -144,7 +144,7 @@ class TableStage(Stage):
         self._h_mask = h_mask
         all_ys = detect_horizontal_lines(binary)
 
-        bands = _group_into_bands(all_ys, gap_threshold=40)
+        bands = _group_into_bands(all_ys, gap_threshold=config.BAND_GAP_THRESHOLD)
         self._two_tables = _draw_two_tables(warped, bands)
         ys = select_student_table(bands)
 
