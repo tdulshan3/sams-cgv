@@ -78,7 +78,39 @@ def remove_table_lines(cell_bgr: np.ndarray) -> np.ndarray:
     # Paint border line pixels with paper background colour
     cleaned[border_lines_mask > 0] = paper_bg
 
+    # Clear outer 2-pixel frame directly to ensure no border pixels touch crop edges
+    cleaned = clear_crop_frame(cleaned, frame_px=2, bg_color=paper_bg)
+
     return cleaned
+
+
+def clear_crop_frame(cell_bgr: np.ndarray, frame_px: int = 2, bg_color: np.ndarray | None = None) -> np.ndarray:
+    """Clear the outer frame pixels of a BGR cell crop by filling them with paper background.
+
+    Args:
+        cell_bgr: BGR image crop of the cell.
+        frame_px: Thickness of outer border frame in pixels to clear.
+        bg_color: BGR background color tuple or array (defaults to white [255, 255, 255]).
+
+    Returns:
+        BGR image with outer frame replaced by background color.
+    """
+    if cell_bgr is None or cell_bgr.size == 0 or frame_px <= 0:
+        return cell_bgr
+
+    result = cell_bgr.copy()
+    h, w = result.shape[:2]
+
+    if bg_color is None:
+        bg_color = np.array([255, 255, 255], dtype=np.uint8)
+
+    result[:frame_px, :] = bg_color
+    result[h - frame_px :, :] = bg_color
+    result[:, :frame_px] = bg_color
+    result[:, w - frame_px :] = bg_color
+
+    return result
+
 
 
 def drop_edge_blobs(mask: np.ndarray, margin: int = 2) -> np.ndarray:

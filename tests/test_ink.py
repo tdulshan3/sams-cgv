@@ -45,6 +45,20 @@ def test_drop_edge_blobs():
     assert np.all(cleaned_mask[20:30, 20:30] == 255)
 
 
+def test_clear_crop_frame():
+    """Verify outer 2-pixel border frame of BGR crop is cleared."""
+    from src.detect.cell_clean import clear_crop_frame
+
+    cell = np.zeros((40, 40, 3), dtype=np.uint8)
+    cell[:2, :] = 100  # Dark edge artifact
+    cell[:, :2] = 100
+
+    cleared = clear_crop_frame(cell, frame_px=2)
+    assert np.all(cleared[:2, :] == 255)
+    assert np.all(cleared[:, :2] == 255)
+
+
+
 def test_trim_to_content():
     """Verify content trimming and bounding box calculation."""
     mask = np.zeros((100, 100), dtype=np.uint8)
