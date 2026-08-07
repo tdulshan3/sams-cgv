@@ -155,6 +155,27 @@ def test_ink_mask_combined():
     assert np.array_equal(mask, mask_method)
 
 
+def test_filter_min_area():
+    """Verify a speck of 4 pixels is removed by MIN_BLOB_AREA while a 200-pixel stroke is kept."""
+    from src.detect.ink_mask import filter_min_area
+
+    mask = np.zeros((100, 100), dtype=np.uint8)
+
+    # 4-pixel speck (2x2)
+    mask[10:12, 10:12] = 255
+
+    # 200-pixel stroke (10x20)
+    mask[30:40, 30:50] = 255
+
+    cleaned = filter_min_area(mask, min_area=12)
+
+    # 4-pixel speck should be removed (0)
+    assert np.count_nonzero(cleaned[10:12, 10:12]) == 0
+    # 200-pixel stroke should be kept (255)
+    assert np.count_nonzero(cleaned[30:40, 30:50]) == 200
+
+
+
 
 
     mask = np.zeros((100, 100), dtype=np.uint8)

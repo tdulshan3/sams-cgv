@@ -128,6 +128,48 @@ def ink_mask_combined(
     return mask
 
 
+def filter_min_area(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np.ndarray:
+    """Remove connected components smaller than min_area pixels.
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+        min_area: Minimum area in pixels required to keep a component.
+
+    Returns:
+        uint8 mask with small specks removed.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return mask
+
+    result = mask.copy()
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(result, connectivity=8)
+
+    for i in range(1, num_labels):
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area < min_area:
+            result[labels == i] = 0
+
+    return result
+
+
+def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np.ndarray:
+    """Clean ink mask by removing small specks and edge-touching artifacts.
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+        min_area: Minimum connected component area.
+
+    Returns:
+        Cleaned uint8 mask.
+    """
+    if mask is None or mask.size == 0:
+        return mask
+
+    # Drop small component specks below min_area
+    cleaned = filter_min_area(mask, min_area=min_area)
+    return cleaned
+
+
 def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarray:
     """Segment ink pixels from a BGR cell crop.
 
@@ -144,15 +186,18 @@ def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarra
     method = method.lower()
 
     if method == "saturation":
-        return ink_mask_saturation(cell_bgr)
+        raw_mask = ink_mask_saturation(cell_bgr)
     elif method == "darkness":
-        return ink_mask_darkness(cell_bgr)
+        raw_mask = ink_mask_darkness(cell_bgr)
     elif method == "lab":
-        return ink_mask_lab(cell_bgr)
+        raw_mask = ink_mask_lab(cell_bgr)
     elif method in ("combined", "hsv"):
-        return ink_mask_combined(cell_bgr)
+        raw_mask = ink_mask_combined(cell_bgr)
     else:
-        return ink_mask_combined(cell_bgr)
+        raw_mask = ink_mask_combined(cell_bgr)
+
+    return clean_ink_mask(raw_mask)
+
 
 
 
