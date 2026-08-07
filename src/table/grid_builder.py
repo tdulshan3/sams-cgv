@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import numpy as np
+
 from src.config import (
     EXPECTED_COLS,
     EXPECTED_DATA_ROWS,
@@ -42,20 +44,41 @@ class Grid:
 
     @property
     def n_cols(self) -> int:
-        """Number of data columns."""
-        return len(self.xs) - 1
+        """Number of data columns. Never negative."""
+        return max(0, len(self.xs) - 1)
 
     @property
     def n_rows(self) -> int:
-        """Number of data rows, header excluded."""
-        return len(self.ys) - 1 - self.header_rows
+        """Number of data rows, header excluded. Never negative.
+
+        Without the floor this returns a negative count when fewer lines were
+        detected than the header takes up, and a negative count silently
+        produces an empty loop instead of an error.
+        """
+        return max(0, len(self.ys) - 1 - self.header_rows)
 
     def cell_bbox(self, row: int, col: int) -> tuple[int, int, int, int]:
         """Bounding box (x, y, w, h) for one data cell.
 
         ``row`` is zero-based after the header. ``col`` is zero-based.
+
+        Raises:
+            IndexError: If the grid does not hold that cell, naming what was
+                found. A bare list index here reports ``list index out of
+                range`` from inside the dataclass, which says nothing about
+                which sheet failed or how many lines were detected.
         """
         y_idx = row + self.header_rows
+        if not 0 <= col < self.n_cols:
+            raise IndexError(
+                f"column {col} is outside the detected grid: "
+                f"{self.n_cols} columns from {len(self.xs)} vertical lines"
+            )
+        if not 0 <= row < self.n_rows:
+            raise IndexError(
+                f"row {row} is outside the detected grid: "
+                f"{self.n_rows} data rows from {len(self.ys)} horizontal lines"
+            )
         x = self.xs[col]
         y = self.ys[y_idx]
         w = self.xs[col + 1] - x
@@ -92,11 +115,71 @@ def _group_into_bands(ys: list[int], gap_threshold: int = 40) -> list[list[int]]
     return bands
 
 
+def _merge_closer_than(values: list[int], min_gap: int) -> list[int]:
+    """Collapse runs of positions closer together than ``min_gap`` to their mean.
+
+    A printed rule thick enough to produce two projection peaks arrives as two
+    line positions a few pixels apart. They are not two rows — no row is that
+    short — so they are averaged into one.
+    """
+    if not values:
+        return []
+    merged: list[int] = []
+    cluster = [values[0]]
+    for value in values[1:]:
+        if value - cluster[-1] < min_gap:
+            cluster.append(value)
+        else:
+            merged.append(int(round(sum(cluster) / len(cluster))))
+            cluster = [value]
+    merged.append(int(round(sum(cluster) / len(cluster))))
+    return merged
+
+
+def longest_regular_run(ys: list[int], tolerance: float = 0.35) -> list[int]:
+    """Longest run of consecutive lines that are near-evenly spaced.
+
+    Grouping the page's horizontal lines by a fixed pixel gap cannot separate
+    the two tables on this sheet: the student rows sit about 44 px apart and
+    the gap between the lecture header table and the student table is only
+    about 64 px, so any threshold that keeps the student rows together also
+    swallows the table above it.
+
+    Even spacing does separate them. A ruled table is regular by construction —
+    its rows are the same height — while the lines around it are not. This
+    returns the longest stretch whose gaps all sit within ``tolerance`` of that
+    stretch's own median gap.
+
+    Args:
+        ys: All horizontal line positions on the page, ascending.
+        tolerance: Allowed fractional deviation from the median gap. The header
+            row is slightly shorter than a data row, so this is not tight.
+
+    Returns:
+        The Y positions of the most regular run, or ``ys`` unchanged when there
+        are too few lines to judge.
+    """
+    if len(ys) < 3:
+        return list(ys)
+
+    best: list[int] = []
+    for start in range(len(ys) - 2):
+        for end in range(start + 2, len(ys)):
+            run = ys[start : end + 1]
+            gaps = np.diff(run)
+            median = float(np.median(gaps))
+            if median <= 0:
+                continue
+            if np.all(np.abs(gaps - median) <= tolerance * median) and len(run) > len(best):
+                best = list(run)
+    return best or list(ys)
+
+
 def select_student_table(row_bands: list[list[int]]) -> list[int]:
     """Return the Y positions belonging to the student table.
 
-    The student table has the most horizontal lines. The lecture header
-    table is a small band (usually 2 lines) near the top.
+    The student table is the block of evenly spaced rules. The lecture header
+    table above it is a short, irregular band.
 
     Logs which band was chosen and warns when the expected two bands are
     not found.
@@ -108,8 +191,17 @@ def select_student_table(row_bands: list[list[int]]) -> list[int]:
     if len(row_bands) == 1:
         log.warning("only one table band found; expected two (header + student)")
 
-    # The student table has the most lines.
-    student_band = max(row_bands, key=len)
+    # Bands come from a fixed pixel gap, which shatters a table whose rows are
+    # spaced wider than the threshold. Re-join them and pick by regularity.
+    all_ys = sorted(y for band in row_bands for y in band)
+
+    # A thick printed rule can be detected twice, a few pixels apart. Those
+    # near-duplicates are far closer together than a row is tall, and they
+    # break the regular run at the point they appear — which is why a table
+    # would otherwise be truncated part way down. Collapse them first.
+    all_ys = _merge_closer_than(all_ys, MIN_ROW_HEIGHT)
+
+    student_band = longest_regular_run(all_ys)
     log.info(
         "selected student table band: %d lines at y=%s",
         len(student_band),
