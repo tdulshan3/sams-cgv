@@ -98,6 +98,36 @@ def ink_mask_lab(
     return mask
 
 
+def ink_mask_combined(
+    cell_bgr: np.ndarray,
+    sat_min: int = config.SAT_MIN,
+    val_max: int = config.VAL_MAX,
+) -> np.ndarray:
+    """Extract ink mask combining HSV saturation (coloured pens) and value (black pens).
+
+    Combines: mask = (saturation >= SAT_MIN) OR (value <= VAL_MAX).
+
+    Args:
+        cell_bgr: BGR cell crop (H, W, 3), uint8.
+        sat_min: Minimum saturation threshold for coloured pen ink.
+        val_max: Maximum value threshold for dark black pen ink.
+
+    Returns:
+        uint8 mask with ink = 255 and paper background = 0.
+    """
+    if cell_bgr is None or cell_bgr.size == 0:
+        return np.zeros((0, 0), dtype=np.uint8)
+
+    hsv = cv2.cvtColor(cell_bgr, cv2.COLOR_BGR2HSV)
+    saturation = hsv[:, :, 1]
+    value = hsv[:, :, 2]
+
+    mask = np.zeros_like(saturation, dtype=np.uint8)
+    mask[(saturation >= sat_min) | (value <= val_max)] = 255
+
+    return mask
+
+
 def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarray:
     """Segment ink pixels from a BGR cell crop.
 
@@ -119,9 +149,10 @@ def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarra
         return ink_mask_darkness(cell_bgr)
     elif method == "lab":
         return ink_mask_lab(cell_bgr)
-    elif method == "hsv":
-        return ink_mask_saturation(cell_bgr)
+    elif method in ("combined", "hsv"):
+        return ink_mask_combined(cell_bgr)
     else:
-        return ink_mask_saturation(cell_bgr)
+        return ink_mask_combined(cell_bgr)
+
 
 

@@ -127,6 +127,35 @@ def test_ink_mask_lab():
     assert np.array_equal(mask, mask_method)
 
 
+def test_ink_mask_combined():
+    """Verify combined HSV (saturation OR value) catches blue, black and red ink strokes."""
+    from src.detect.ink_mask import ink_mask, ink_mask_combined
+
+    # White cell paper (high value, low saturation)
+    cell = np.full((60, 120, 3), 245, dtype=np.uint8)
+
+    # Blue stroke (high saturation)
+    cell[10:20, 10:40] = [220, 50, 20]  # BGR blue
+
+    # Black stroke (low value, low saturation)
+    cell[25:35, 50:80] = [30, 30, 30]
+
+    # Red stroke (high saturation)
+    cell[40:50, 90:110] = [20, 20, 220]  # BGR red
+
+    mask = ink_mask_combined(cell)
+
+    assert np.all(mask[10:20, 10:40] == 255)
+    assert np.all(mask[25:35, 50:80] == 255)
+    assert np.all(mask[40:50, 90:110] == 255)
+    assert np.all(mask[0:5, 0:5] == 0)
+
+    # Check ink_mask default/combined
+    mask_method = ink_mask(cell, method="combined")
+    assert np.array_equal(mask, mask_method)
+
+
+
 
     mask = np.zeros((100, 100), dtype=np.uint8)
     mask[30:70, 40:80] = 255
