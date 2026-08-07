@@ -296,6 +296,28 @@ def test_ink_features_skeleton_fill():
     assert feats["centroid_offset"] == pytest.approx(0.5, abs=1.0)  # Centroid near center (50, 50)
 
 
+def test_save_cell_outputs(tmp_path, monkeypatch):
+    """Verify cell crop and mask are saved to disk in the correct folder layout."""
+    from pathlib import Path
+
+    from src import config
+    from src.detect.ink_mask import save_cell_outputs
+
+    monkeypatch.setattr(config, "CELLS", tmp_path / "cells")
+
+    cell_bgr = np.full((30, 60, 3), 200, dtype=np.uint8)
+    mask = np.full((30, 60), 255, dtype=np.uint8)
+
+    crop_path_str, mask_path_str = save_cell_outputs("12.07.2019", 0, cell_bgr, mask)
+
+    assert Path(crop_path_str).is_file()
+    assert Path(mask_path_str).is_file()
+    assert "12.07.2019" in crop_path_str
+    assert "row_0.png" in crop_path_str
+    assert "row_0_mask.png" in mask_path_str
+
+
+
 
 
 

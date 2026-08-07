@@ -361,7 +361,42 @@ def ink_features(mask: np.ndarray) -> dict:
 
 
 
+def save_cell_outputs(
+    sheet_date: str,
+    row: int,
+    cell_bgr: np.ndarray,
+    mask: np.ndarray,
+) -> tuple[str, str]:
+    """Save cell crop image and ink mask to disk for signature recognition (M8).
+
+    Writes to outputs/cells/<sheet_date>/row_<row>.png and row_<row>_mask.png.
+
+    Args:
+        sheet_date: Date stem string (e.g. '12.07.2019').
+        row: Row index integer (0-based).
+        cell_bgr: BGR crop of the cell.
+        mask: uint8 binary ink mask.
+
+    Returns:
+        tuple containing (crop_path_str, mask_path_str).
+    """
+    out_dir = config.CELLS / sheet_date
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    crop_file = out_dir / f"row_{row}.png"
+    mask_file = out_dir / f"row_{row}_mask.png"
+
+    if cell_bgr is not None and cell_bgr.size > 0:
+        cv2.imwrite(str(crop_file), cell_bgr)
+
+    if mask is not None and mask.size > 0:
+        cv2.imwrite(str(mask_file), mask)
+
+    return str(crop_file), str(mask_file)
+
+
 def count_pen_colours(cells_bgr: list[np.ndarray], masks: list[np.ndarray]) -> dict[str, int]:
+
 
     """Count pen colour usage across all signature cells on a sheet.
 
