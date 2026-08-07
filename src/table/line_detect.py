@@ -138,7 +138,10 @@ def detect_lines_hough(binary: np.ndarray) -> tuple[list[int], list[int]]:
     h_ys: list[int] = []
     v_xs: list[int] = []
     if lines is not None:
-        for x1, y1, x2, y2 in lines[:, 0]:
+        # OpenCV 4 returns (N, 1, 4) here and OpenCV 5 returns (N, 4). We pin
+        # opencv-python 5, where lines[:, 0] is a column of ints and unpacking
+        # it raises. Reshaping first works on both.
+        for x1, y1, x2, y2 in lines.reshape(-1, 4):
             angle = abs(np.arctan2(y2 - y1, x2 - x1))
             if angle < angle_tol:
                 h_ys.append((y1 + y2) // 2)
