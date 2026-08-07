@@ -13,11 +13,43 @@ cell crops from the colour warped image).
 ## Key decisions
 
 ### Two tables on the page
-Every sheet has a one-row lecture header table above the student table.
-`select_student_table` groups horizontal lines into bands separated by gaps
-larger than 40 px. The band with the most lines is the student table. The
-other band is logged and discarded. If only one band is found a WARNING is
-issued.
+Every sheet has a one-row lecture header table above the student table, and it
+carries a signature of its own — the lecturer's. Selecting the wrong table
+reports that signature as a student's, and the output still looks plausible.
+
+My first approach grouped horizontal lines into bands separated by gaps larger
+than 40 px and took the band with the most lines. **Measured against the real
+sheets, that cannot work.** The student rows sit ~44 px apart and the gap
+between the two tables is only ~64 px, so every threshold either shatters the
+student table into single-line bands or swallows the header table with it. On
+three of five sheets it produced one row instead of six.
+
+`longest_regular_run` replaces it. A ruled table is regular by construction —
+its rows are the same height — while the lines around it are not, so the
+student table is the longest stretch of horizontal lines whose gaps all sit
+within `ROW_SPACING_TOLERANCE` of that stretch's own median gap. That separates
+the two tables by a property they genuinely differ in rather than by a pixel
+distance that happens to fall between them.
+
+One wrinkle: a printed rule thick enough to produce two projection peaks
+arrives as two positions ~9 px apart, and those near-duplicates break the run
+where they appear — on `12.07.2019` that truncated the table at four rows.
+`_merge_closer_than` collapses anything closer than `MIN_ROW_HEIGHT` first,
+since no row is that short.
+
+### Columns are detected inside the table, not across the page
+Searching the whole page for vertical rules also finds the header table's
+columns, the sheet edge and the edge of the photograph. They arrive as extra
+entries at both ends of `xs`, and because the signature column is addressed
+**by index**, two spurious lines on the left silently shift every column: six
+cells are still produced and every one holds a student's printed *name*.
+
+Two changes fix it. Vertical detection runs on the student band only, which
+also makes `V_KERNEL_RATIO` mean what it was supposed to — a fraction of the
+table's own height, not of the whole page, which is why a 0.30 kernel had been
+eroding every column rule away. Then `_clip_to_table_width` drops any vertical
+outside the span of the row rules, since the row rules span exactly the table's
+width and nothing else.
 
 ### Primary method: morphology
 `line_mask` erodes then dilates with a long axis-aligned kernel. Only ink
@@ -82,5 +114,41 @@ The original brief assumed 4 columns. The real sheet has 5:
 
 ## Verification
 
-On all five sheets: `len(ctx["cells"]) == 6` and every crop in
-`m5_cells_numbered.png` shows a signature box, not a name column.
+On all five sheets the grid comes out as 6 data rows × 5 columns and produces
+6 signature cells, each a colour crop of column 4:
+
+| Sheet | rows | cols | cells | crop size |
+|---|---|---|---|---|
+| 31.05.2019 | 6 | 5 | 6 | 232 × 43 |
+| 21.06.2019 | 6 | 5 | 6 | 224 × 41 |
+| 28.06.2019 | 6 | 5 | 6 | 221 × 42 |
+| 05.07.2019 | 6 | 5 | 6 | 227 × 42 |
+| 12.07.2019 | 6 | 5 | 6 | 227 × 45 |
+
+`tests/test_real_sheets.py` asserts this on every run, including a cross-check
+that the signature cell starts further right than every other column — so an
+off-by-one in the grid fails the build even if the column *count* is right.
+
+## What I learned about testing
+
+My module shipped with 84 passing tests and produced **zero cells on every real
+sheet**. All 84 were synthetic. Two things hid behind them:
+
+* `cv2.HoughLinesP` returns `(N, 4)` on the OpenCV 5 we pin and `(N, 1, 4)` on
+  OpenCV 4, so `lines[:, 0]` crashed on any image with enough lines to return a
+  result — which a small synthetic fixture never has. It is now wrapped once in
+  `src/utils/cvcompat.py`.
+* Upstream, M2's geometry was handing me mirrored 412 × 52 crops — 0.6% of the
+  page. I had been tuning line detection against images with no table in them.
+
+The lesson is that a synthetic fixture tests the code I wrote against the input
+I imagined. Neither defect was visible until `sams.py` was run on a real photo,
+and that run is now part of the suite.
+
+---
+
+*Integration note: the band-selection rewrite, the column clipping, the
+duplicate-rule merge and the `Grid` bounds guards were applied by M1 during
+integration under deadline pressure, and are described above as they now stand
+in the code. Review them before submission and rewrite this section in your own
+words.*
