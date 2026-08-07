@@ -173,7 +173,8 @@ sams-cgv/
 │   ├── utils/
 │   │   ├── stage.py           # M1
 │   │   ├── logging.py         # M1
-│   │   └── timing.py          # M1
+│   │   ├── timing.py          # M1
+│   │   └── cvcompat.py        # M1 — opencv 5 return-shape wrappers (§6.6)
 │   ├── io/
 │   │   ├── image_loader.py    # M2
 │   │   ├── xml_parser.py      # M7
@@ -373,7 +374,28 @@ The three programs are thin wrappers. They must not know how anything works, onl
 
 `save_only=True` means write to `outputs/` and open no window — needed so the whole prototype can be run over SSH or in a test.
 
-### 6.6 `src/cli.py`
+### 6.6 `src/utils/cvcompat.py` — OpenCV 5, read this before using Hough
+
+We pin **opencv-python 5**. Several OpenCV functions that returned `(N, 1, K)` in version 4 return `(N, K)` in version 5, and essentially every tutorial, Stack Overflow answer and textbook example online was written against version 4. Code copied from them looks correct, passes a synthetic unit test, and dies on the first real photo:
+
+```
+TypeError: cannot unpack non-iterable numpy.int32 object
+```
+
+**This has already cost the group two modules** — M2 in PR #3 and M5 in PR #11 — and both times it was found only by running `sams.py` on a real sheet, never by the test suite.
+
+So: **never call `cv2.HoughLinesP` directly.** Call the wrapper, which returns `(N, 4)` on every version and an empty array rather than `None`:
+
+```python
+from src.utils.cvcompat import hough_line_segments
+
+for x1, y1, x2, y2 in hough_line_segments(binary, threshold=80):
+    ...
+```
+
+`tests/test_pipeline.py::test_nobody_calls_houghlinesp_directly` fails the build if any module under `src/` reaches past it. If you hit the same shape change on another OpenCV call (`findContours`, `goodFeaturesToTrack`, ORB output), add a wrapper here rather than a fix in your own module — that is what stops it happening a third time.
+
+### 6.7 `src/cli.py`
 
 M1 owns a small shared helper module for the three programs: index validation, the *module not ready* message, and the friendly-error-then-`exit(2)` path. It exists so the same 20 lines are not written three times, and so all three commands fail in exactly the same way.
 
