@@ -194,6 +194,54 @@ def clean_ink_mask(mask: np.ndarray, min_area: int = config.MIN_BLOB_AREA) -> np
 
 
 
+def dominant_pen_colour(cell_bgr: np.ndarray, mask: np.ndarray) -> str:
+    """Identify the dominant pen colour used in a cell crop.
+
+    Maps ink pixel hues through config.PEN_HUE_RANGES. If saturation is low,
+    returns 'black'.
+
+    Args:
+        cell_bgr: BGR cell crop (H, W, 3), uint8.
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        One of 'blue' | 'black' | 'red' | 'green' | 'other'.
+    """
+    if cell_bgr is None or mask is None or not np.any(mask):
+        return "black"
+
+    hsv = cv2.cvtColor(cell_bgr, cv2.COLOR_BGR2HSV)
+    ink_pixels = hsv[mask > 0]
+
+    if len(ink_pixels) == 0:
+        return "black"
+
+    mean_sat = float(np.mean(ink_pixels[:, 1]))
+
+    # Low saturation means black pen ink
+    if mean_sat < config.SAT_MIN:
+        return "black"
+
+    # Count ink pixels falling into each pen colour range
+    hues = ink_pixels[:, 0]
+    counts: dict[str, int] = {}
+
+    for color, ranges in config.PEN_HUE_RANGES.items():
+        color_count = 0
+        for low, high in ranges:
+            color_count += int(np.sum((hues >= low) & (hues <= high)))
+        counts[color] = color_count
+
+    max_color = max(counts, key=lambda k: counts[k])
+    max_count = counts[max_color]
+
+    # Require at least 30% of ink pixels to match a recognized colour range
+    if max_count > 0 and max_count >= 0.3 * len(ink_pixels):
+        return max_color
+
+    return "other"
+
+
 def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarray:
     """Segment ink pixels from a BGR cell crop.
 
@@ -221,6 +269,8 @@ def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarra
         raw_mask = ink_mask_combined(cell_bgr)
 
     return clean_ink_mask(raw_mask)
+
+
 
 
 

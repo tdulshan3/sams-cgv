@@ -193,6 +193,40 @@ def test_close_stroke_gaps():
     assert np.all(closed[20:25, 40] == 255)
 
 
+def test_dominant_pen_colour():
+    """Verify dominant_pen_colour returns 'blue' for pure blue, 'red' for red, 'green' for green, 'black' for black."""
+    from src.detect.ink_mask import dominant_pen_colour
+
+    # 1. Blue stroke
+    cell_blue = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_blue[10:30, 10:50] = [220, 50, 20]  # BGR blue (Hue ~105)
+    mask_blue = np.zeros((40, 60), dtype=np.uint8)
+    mask_blue[10:30, 10:50] = 255
+    assert dominant_pen_colour(cell_blue, mask_blue) == "blue"
+
+    # 2. Black stroke (low saturation)
+    cell_black = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_black[10:30, 10:50] = [40, 40, 40]  # Black
+    mask_black = np.zeros((40, 60), dtype=np.uint8)
+    mask_black[10:30, 10:50] = 255
+    assert dominant_pen_colour(cell_black, mask_black) == "black"
+
+    # 3. Red stroke
+    cell_red = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_red[10:30, 10:50] = [20, 20, 220]  # BGR red (Hue ~0/180)
+    mask_red = np.zeros((40, 60), dtype=np.uint8)
+    mask_red[10:30, 10:50] = 255
+    assert dominant_pen_colour(cell_red, mask_red) == "red"
+
+    # 4. Green stroke
+    cell_green = np.full((40, 60, 3), 245, dtype=np.uint8)
+    cell_green[10:30, 10:50] = [20, 200, 20]  # BGR green (Hue ~60)
+    mask_green = np.zeros((40, 60), dtype=np.uint8)
+    mask_green[10:30, 10:50] = 255
+    assert dominant_pen_colour(cell_green, mask_green) == "green"
+
+
+
 
 
 
