@@ -81,6 +81,48 @@ def _draw_two_tables(warped: np.ndarray, bands: list[list[int]]) -> np.ndarray:
     return overlay
 
 
+def _clip_to_table_width(
+    xs: list[int], band_h_mask: np.ndarray, tolerance: int = 12
+) -> list[int]:
+    """Drop vertical lines that fall outside the table's own width.
+
+    Vertical detection inside the student band still picks up the edges of the
+    sheet and of the photograph, which run the full height of everything and so
+    survive any morphology. They arrive as extra entries at both ends of ``xs``,
+    and because the signature column is addressed by index, two spurious lines
+    on the left silently shift every column: the crop that should hold a
+    signature comes back holding the student's name.
+
+    The row rules are the fix. They span exactly the width of the table and
+    nothing else, so any column rule must lie between their endpoints.
+
+    Args:
+        xs: Detected vertical line positions.
+        band_h_mask: Horizontal line mask, cropped to the student table's rows.
+        tolerance: Slack in pixels at each end.
+
+    Returns:
+        Only the vertical lines that lie within the row rules' span.
+    """
+    ink_per_column = band_h_mask.sum(axis=0)
+    occupied = np.flatnonzero(ink_per_column > 0)
+    if occupied.size == 0:
+        return xs
+
+    left = int(occupied[0]) - tolerance
+    right = int(occupied[-1]) + tolerance
+    kept = [x for x in xs if left <= x <= right]
+    dropped = len(xs) - len(kept)
+    if dropped:
+        log.info(
+            "dropped %d vertical line(s) outside the table span %d-%d",
+            dropped,
+            left,
+            right,
+        )
+    return kept
+
+
 class TableStage(Stage):
     """Pipeline stage: detect the student table and crop signature cells."""
 
@@ -97,15 +139,30 @@ class TableStage(Stage):
         binary: np.ndarray = ctx["binary"]
         warped: np.ndarray = ctx["warped"]
 
-        # --- Line masks (morphology, primary method) ---
+        # --- Horizontal lines and the two table bands, over the whole page ---
         h_mask = line_mask(binary, "horizontal")
-        v_mask = line_mask(binary, "vertical")
         self._h_mask = h_mask
-        self._v_mask = v_mask
-
-        # --- Line positions from projection profiles ---
         all_ys = detect_horizontal_lines(binary)
-        xs = detect_vertical_lines(binary)
+
+        bands = _group_into_bands(all_ys, gap_threshold=40)
+        self._two_tables = _draw_two_tables(warped, bands)
+        ys = select_student_table(bands)
+
+        # --- Vertical lines, inside the student table only ---
+        #
+        # Searching the whole page finds the lecture header table's columns and
+        # the page edges as well, and mixes all of them into one x list. It also
+        # makes V_KERNEL_RATIO meaningless: a column rule spans the height of
+        # its own table, roughly a seventh of the page, so a kernel measured
+        # against the full page height erodes every one of them away.
+        # Restricted to the band, the ratio is a fraction of the table's own
+        # height, which is what it was always meant to be.
+        top, bottom = (ys[0], ys[-1]) if len(ys) >= 2 else (0, binary.shape[0])
+        strip = binary[top : bottom + 1, :]
+        v_mask = line_mask(strip, "vertical")
+        self._v_mask = v_mask
+        xs = detect_vertical_lines(strip)
+        xs = _clip_to_table_width(xs, h_mask[top : bottom + 1, :])
 
         # --- Hough cross-check (logged but not used for the main grid) ---
         hough_ys, hough_xs = detect_lines_hough(binary)
@@ -116,11 +173,6 @@ class TableStage(Stage):
             len(hough_ys),
             len(hough_xs),
         )
-
-        # --- Select the student table from the two table bands ---
-        bands = _group_into_bands(all_ys, gap_threshold=40)
-        self._two_tables = _draw_two_tables(warped, bands)
-        ys = select_student_table(bands)
 
         # --- Build the grid with repair ---
         grid = build_grid(xs, ys)

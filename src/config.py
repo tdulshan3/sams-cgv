@@ -212,9 +212,15 @@ rectangle does."""
 
 # --- M5 table detection ---
 
-H_KERNEL_RATIO = 0.30
+H_KERNEL_RATIO = 0.20
 """Horizontal morphology kernel width as a fraction of image width.
-Only runs longer than this fraction survive as horizontal lines."""
+Only runs longer than this fraction survive as horizontal lines.
+
+Swept 0.30 down to 0.10 against all five sheets. At 0.30 the fainter printed
+rules are eroded away and only 1 to 4 of the 6 student rows survive; 0.20 is
+the widest value that recovers all six on four of the five sheets, with grid
+repair covering the fifth. The student table spans about 64% of the page
+width, so 0.20 still rejects anything that is not a table rule."""
 
 V_KERNEL_RATIO = 0.30
 """Vertical morphology kernel height as a fraction of image height."""
