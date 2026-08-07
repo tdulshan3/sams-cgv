@@ -63,6 +63,41 @@ def ink_mask_darkness(cell_bgr: np.ndarray, val_max: int = config.VAL_MAX) -> np
     return mask
 
 
+def ink_mask_lab(
+    cell_bgr: np.ndarray,
+    chrom_min: float = 12.0,
+    val_max: int = config.VAL_MAX,
+) -> np.ndarray:
+    """Extract ink mask using CIELAB colour space (a* and b* channels).
+
+    Paper is neutral gray (a*, b* near 128). Coloured pens depart from 128 in a* or b*,
+    and black pen ink has low L* (luminance).
+
+    Args:
+        cell_bgr: BGR cell crop (H, W, 3), uint8.
+        chrom_min: Minimum chrominance distance from neutral (128, 128) for coloured ink.
+        val_max: Maximum L* threshold for dark ink.
+
+    Returns:
+        uint8 mask with ink = 255 and background = 0.
+    """
+    if cell_bgr is None or cell_bgr.size == 0:
+        return np.zeros((0, 0), dtype=np.uint8)
+
+    lab = cv2.cvtColor(cell_bgr, cv2.COLOR_BGR2LAB)
+    l_chan = lab[:, :, 0]
+    a_chan = lab[:, :, 1].astype(np.float32) - 128.0
+    b_chan = lab[:, :, 2].astype(np.float32) - 128.0
+
+    chroma = np.sqrt(a_chan**2 + b_chan**2)
+
+    # Combined mask: high chrominance (colour) or low luminance (dark ink)
+    mask = np.zeros_like(l_chan, dtype=np.uint8)
+    mask[(chroma >= chrom_min) | (l_chan <= val_max)] = 255
+
+    return mask
+
+
 def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarray:
     """Segment ink pixels from a BGR cell crop.
 
@@ -82,9 +117,11 @@ def ink_mask(cell_bgr: np.ndarray, method: str = config.INK_METHOD) -> np.ndarra
         return ink_mask_saturation(cell_bgr)
     elif method == "darkness":
         return ink_mask_darkness(cell_bgr)
+    elif method == "lab":
+        return ink_mask_lab(cell_bgr)
     elif method == "hsv":
-        # For now, hsv combines saturation or darkness (or saturation branch)
         return ink_mask_saturation(cell_bgr)
     else:
         return ink_mask_saturation(cell_bgr)
+
 

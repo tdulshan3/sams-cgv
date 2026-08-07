@@ -103,6 +103,31 @@ def test_ink_mask_darkness():
     assert np.array_equal(mask, mask_method)
 
 
+def test_ink_mask_lab():
+    """Verify LAB colour space masking detects both coloured ink and dark ink."""
+    from src.detect.ink_mask import ink_mask, ink_mask_lab
+
+    # White cell paper
+    cell = np.full((50, 100, 3), 245, dtype=np.uint8)
+
+    # Add red pen stroke (high chrominance in LAB a* channel)
+    cell[10:20, 20:40] = [30, 30, 220]  # Red in BGR
+
+    # Add black pen stroke (low luminance L*)
+    cell[30:40, 60:80] = [30, 30, 30]
+
+    mask = ink_mask_lab(cell)
+
+    assert np.all(mask[10:20, 20:40] == 255)
+    assert np.all(mask[30:40, 60:80] == 255)
+    assert np.all(mask[0:5, 0:5] == 0)
+
+    # Check ink_mask with method='lab'
+    mask_method = ink_mask(cell, method="lab")
+    assert np.array_equal(mask, mask_method)
+
+
+
     mask = np.zeros((100, 100), dtype=np.uint8)
     mask[30:70, 40:80] = 255
 
