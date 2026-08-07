@@ -212,6 +212,37 @@ rectangle does."""
 
 # --- M5 table detection ---
 
+H_KERNEL_RATIO = 0.30
+"""Horizontal morphology kernel width as a fraction of image width.
+Only runs longer than this fraction survive as horizontal lines."""
+
+V_KERNEL_RATIO = 0.30
+"""Vertical morphology kernel height as a fraction of image height."""
+
+LINE_MERGE_TOL = 8
+"""Peaks within this many pixels are merged into a single line position."""
+
+MIN_ROW_HEIGHT = 18
+"""Rows separated by fewer pixels than this are treated as duplicates."""
+
+MIN_COL_WIDTH = 25
+"""Columns separated by fewer pixels than this are treated as duplicates."""
+
+CELL_INSET = 4
+"""Pixels shaved off each side of a cell crop to exclude the border line."""
+
+CELL_PAD_Y = 6
+"""Extra pixels added below a signature cell crop to catch overflowing strokes.
+
+On 31.05.2019 and 05.07.2019 signatures cross into the row below."""
+
+EXPECTED_COLS = 5
+"""No | Student No | Title | Student Name | Signature (measured T0)."""
+
+EXPECTED_DATA_ROWS = 6
+"""Every sheet has exactly 6 student rows (measured T0)."""
+
+
 # --- M6 ink segmentation ---
 
 # --- M7 decision ---

@@ -21,9 +21,11 @@ from pathlib import Path
 from src import config, stubs
 from src.models import AttendanceRecord, SheetMeta, Student
 from src.pipeline import Pipeline
+from src.table.cell_extract import TableStage
 from src.utils.logging import collect_warnings, get_logger, set_debug
 from src.utils.stage import Stage
 from src.viz.progress import ProgressViewer
+
 
 log = get_logger("sams")
 
@@ -37,10 +39,11 @@ STAGES: list[Callable[[], Stage]] = [
     stubs.GeometryStub,   # M2 — src.preprocess.deskew
     stubs.EnhanceStub,    # M3 — src.preprocess.enhance
     stubs.BinarizeStub,   # M4 — src.preprocess.binarize
-    stubs.TableStub,      # M5 — src.table.cell_extract
+    TableStage,           # M5 — src.table.cell_extract
     stubs.InkStub,        # M6 — src.detect.ink_mask
     stubs.DecisionStub,   # M7 — src.detect.presence
 ]
+
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
 
 Swapping a stub for the real module is one line here and one deletion in
