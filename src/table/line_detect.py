@@ -15,6 +15,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 from src.config import H_KERNEL_RATIO, LINE_MERGE_TOL, V_KERNEL_RATIO
+from src.utils.cvcompat import hough_line_segments
 from src.utils.logging import get_logger
 
 log = get_logger("table")
@@ -127,26 +128,20 @@ def detect_lines_hough(binary: np.ndarray) -> tuple[list[int], list[int]]:
         Tuple of (y_positions, x_positions) for horizontal and vertical lines.
     """
     angle_tol = np.deg2rad(5)
-    lines = cv2.HoughLinesP(
+    lines = hough_line_segments(
         binary,
-        rho=1,
-        theta=np.pi / 180,
         threshold=80,
-        minLineLength=int(binary.shape[1] * 0.3),
-        maxLineGap=20,
+        min_line_length=int(binary.shape[1] * 0.3),
+        max_line_gap=20,
     )
     h_ys: list[int] = []
     v_xs: list[int] = []
-    if lines is not None:
-        # OpenCV 4 returns (N, 1, 4) here and OpenCV 5 returns (N, 4). We pin
-        # opencv-python 5, where lines[:, 0] is a column of ints and unpacking
-        # it raises. Reshaping first works on both.
-        for x1, y1, x2, y2 in lines.reshape(-1, 4):
-            angle = abs(np.arctan2(y2 - y1, x2 - x1))
-            if angle < angle_tol:
-                h_ys.append((y1 + y2) // 2)
-            elif abs(angle - np.pi / 2) < angle_tol:
-                v_xs.append((x1 + x2) // 2)
+    for x1, y1, x2, y2 in lines:
+        angle = abs(np.arctan2(float(y2 - y1), float(x2 - x1)))
+        if angle < angle_tol:
+            h_ys.append((y1 + y2) // 2)
+        elif abs(angle - np.pi / 2) < angle_tol:
+            v_xs.append((x1 + x2) // 2)
     h_ys = _merge_nearby(sorted(h_ys), LINE_MERGE_TOL)
     v_xs = _merge_nearby(sorted(v_xs), LINE_MERGE_TOL)
     log.debug("hough horizontal lines: %s", h_ys)

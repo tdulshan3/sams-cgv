@@ -13,6 +13,7 @@ from src.config import (
     BORDER_TRIM_PX,
 )
 from src.io.image_loader import load_image, resize_to_width
+from src.utils.cvcompat import hough_line_segments
 from src.utils.stage import Stage
 
 
@@ -105,16 +106,11 @@ def four_point_warp(bgr: np.ndarray, corners: np.ndarray) -> np.ndarray:
 def estimate_skew_angle(grey: np.ndarray) -> float:
     """Small residual rotation in degrees, from Hough lines or minAreaRect."""
     edges = cv2.Canny(grey, CANNY_LOW, CANNY_HIGH)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=50, maxLineGap=10)
-    
-    if lines is None:
-        return 0.0
-        
+    lines = hough_line_segments(edges, threshold=100, min_line_length=50, max_line_gap=10)
+
     angles = []
-    for line in lines:
-        pts = line[0] if line.ndim == 2 else line
-        x1, y1, x2, y2 = pts
-        angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
+    for x1, y1, x2, y2 in lines:
+        angle = np.degrees(np.arctan2(float(y2 - y1), float(x2 - x1)))
         
         # Normalize angle to [-90, 90] range
         if angle > 90:
