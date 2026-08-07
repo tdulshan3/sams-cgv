@@ -80,6 +80,29 @@ def test_ink_mask_saturation():
     mask_method = ink_mask(cell, method="saturation")
     assert np.array_equal(mask, mask_method)
 
+
+def test_ink_mask_darkness():
+    """Verify darkness (value) thresholding branch detects black pen ink."""
+    from src.detect.ink_mask import ink_mask, ink_mask_darkness
+
+    # White cell paper (high value ~255)
+    cell = np.full((50, 100, 3), 245, dtype=np.uint8)
+
+    # Black pen stroke (low value ~40, low saturation)
+    cell[15:35, 30:70] = [40, 40, 40]
+
+    mask = ink_mask_darkness(cell, val_max=200)
+
+    # Black stroke should be 255
+    assert np.all(mask[15:35, 30:70] == 255)
+    # Background paper should be 0
+    assert np.all(mask[0:10, 0:10] == 0)
+
+    # Check ink_mask with method='darkness'
+    mask_method = ink_mask(cell, method="darkness")
+    assert np.array_equal(mask, mask_method)
+
+
     mask = np.zeros((100, 100), dtype=np.uint8)
     mask[30:70, 40:80] = 255
 
