@@ -59,8 +59,27 @@ def test_clear_crop_frame():
 
 
 
-def test_trim_to_content():
-    """Verify content trimming and bounding box calculation."""
+def test_ink_mask_saturation():
+    """Verify HSV saturation thresholding detects coloured pen strokes (blue, red, green)."""
+    from src.detect.ink_mask import ink_mask, ink_mask_saturation
+
+    # White cell (zero saturation)
+    cell = np.full((50, 100, 3), 255, dtype=np.uint8)
+
+    # Add a blue pen stroke (high saturation)
+    cell[20:30, 40:60] = [255, 0, 0]  # Pure BGR blue
+
+    mask = ink_mask_saturation(cell, sat_min=60)
+
+    # Blue stroke region should be 255
+    assert np.all(mask[20:30, 40:60] == 255)
+    # Background should be 0
+    assert np.all(mask[0:10, 0:10] == 0)
+
+    # Check ink_mask with method='saturation'
+    mask_method = ink_mask(cell, method="saturation")
+    assert np.array_equal(mask, mask_method)
+
     mask = np.zeros((100, 100), dtype=np.uint8)
     mask[30:70, 40:80] = 255
 
