@@ -29,7 +29,6 @@ from src.utils.logging import collect_warnings, get_logger, set_debug
 from src.utils.stage import Stage
 from src.viz.progress import ProgressViewer
 
-
 log = get_logger("sams")
 
 SUMMARY_RULE = "─" * 61
@@ -42,11 +41,10 @@ STAGES: list[Callable[[], Stage]] = [
     GeometryStage,        # M2 — real, merged in #8
     EnhanceStage,         # M3 — real, merged in #9
     BinarizeStage,        # M4 — real, merged in #10
-    TableStage,           # M5 — src.table.cell_extract
+    TableStage,           # M5 — real, merged in #11
     stubs.InkStub,        # M6 — src.detect.ink_mask
     stubs.DecisionStub,   # M7 — src.detect.presence
 ]
-
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
 
 Swapping a stub for the real module is one line here and one deletion in
