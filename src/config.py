@@ -302,6 +302,20 @@ HOUGH_MAX_LINE_GAP = 20
 
 # --- M6 ink segmentation ---
 
+INK_METHOD = "combined"
+SAT_MIN = 50            # coloured pens: saturation above this (lowered to catch faded ink)
+VAL_MAX = 200           # dark ink: value below this
+
+DARK_MAX = 160          # black pen fallback in greyscale
+MIN_BLOB_AREA = 12      # ignore specks smaller than this
+CELL_PAD = 4
+PEN_HUE_RANGES = {
+    "blue":  [(90, 130)],
+    "green": [(40, 85)],
+    "red":   [(0, 10), (170, 180)],
+}
+
+
 # --- M7 decision ---
 
 # --- M8 recognition ---

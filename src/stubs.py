@@ -55,19 +55,6 @@ class _Stub(Stage):
         return image
 
 
-# STUB — owned by M6, delete when their module lands
-class InkStub(_Stub):
-    """Stands in for cell cleaning and ink segmentation."""
-
-    name = "ink"
-    owner = "M6"
-
-    def run(self, ctx: dict) -> dict:
-        self.announce()
-        ctx["ink"] = []
-        return ctx
-
-
 # STUB — owned by M7, delete when their module lands
 class DecisionStub(_Stub):
     """Stands in for the present or absent decision and the database write."""

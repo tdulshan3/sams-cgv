@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from src import config, stubs
+from src.detect.ink_mask import InkStage
 from src.models import AttendanceRecord, SheetMeta, Student
 from src.pipeline import Pipeline
 from src.preprocess.binarize import BinarizeStage
@@ -42,9 +43,10 @@ STAGES: list[Callable[[], Stage]] = [
     EnhanceStage,         # M3 — real, merged in #9
     BinarizeStage,        # M4 — real, merged in #10
     TableStage,           # M5 — real, merged in #11
-    stubs.InkStub,        # M6 — src.detect.ink_mask
+    InkStage,             # M6 — real, src.detect.ink_mask
     stubs.DecisionStub,   # M7 — src.detect.presence
 ]
+
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
 
 Swapping a stub for the real module is one line here and one deletion in
