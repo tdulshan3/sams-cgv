@@ -1,0 +1,546 @@
+"""Thresholding and morphology.
+
+Turns ``ctx["grey"]`` (M3's evenly-lit, denoised greyscale sheet) into
+``ctx["binary"]``: a strictly two-valued image where ink is 255 (white) and
+paper is 0 (black). M5's line detection reads this directly, so a broken
+table line or a signature welded to its border here becomes M5's problem
+two stages later — see ``BUILD_SPEC.md`` section 9.4.
+
+**Convention that must never change: ink = 255, paper = 0.**
+``cv2.THRESH_BINARY_INV`` gives that polarity directly; every function below
+keeps it.
+"""
+
+from __future__ import annotations
+
+import time
+
+import cv2
+import numpy as np
+from skimage.filters import threshold_sauvola as _sk_threshold_sauvola
+from skimage.morphology import skeletonize as _sk_skeletonize
+
+from src.config import (
+    ADAPTIVE_BLOCK,
+    ADAPTIVE_C,
+    BINARIZE_METHOD,
+    MORPH_CLOSE_K,
+    MORPH_KERNEL_SHAPE,
+    MORPH_OPEN_K,
+    SAUVOLA_K,
+    SAUVOLA_R,
+    SAUVOLA_WINDOW,
+    SIG_MORPH_CLOSE_K,
+    SIG_MORPH_OPEN_K,
+    THRESHOLD_GLOBAL_VALUE,
+)
+from src.utils.logging import get_logger
+from src.utils.stage import Stage
+
+log = get_logger("binarize")
+
+_KERNEL_SHAPES = {
+    "ellipse": cv2.MORPH_ELLIPSE,
+    "rect": cv2.MORPH_RECT,
+    "cross": cv2.MORPH_CROSS,
+}
+"""Structuring element shapes ``morph_open``/``morph_close`` can be built from.
+
+The shape decides *which* neighbours count as adjacent, and that changes what
+survives. A rectangle treats diagonal and orthogonal neighbours alike, so it
+is the most aggressive and squares off the rounded ends of pen strokes. An
+ellipse approximates a disc, which matches the shape a ballpoint actually
+lays down. A cross only reaches along the two axes, so it is the gentlest
+and barely touches diagonal strokes.
+"""
+
+
+def structuring_element(shape: str, size: int) -> np.ndarray:
+    """Build a ``size`` x ``size`` structuring element of the named shape.
+
+    Args:
+        shape: ``"ellipse"`` | ``"rect"`` | ``"cross"``.
+        size: Side length in pixels.
+
+    Returns:
+        The kernel, as ``cv2.getStructuringElement`` produces it.
+
+    Raises:
+        ValueError: ``shape`` is not one of the three above.
+    """
+    if shape not in _KERNEL_SHAPES:
+        raise ValueError(
+            f"unknown kernel shape {shape!r}, expected one of {sorted(_KERNEL_SHAPES)}"
+        )
+    return cv2.getStructuringElement(_KERNEL_SHAPES[shape], (size, size))
+
+
+def threshold_global(grey: np.ndarray, value: int = THRESHOLD_GLOBAL_VALUE) -> np.ndarray:
+    """Fixed threshold baseline: ink = 255, paper = 0.
+
+    Kept deliberately simple and deliberately wrong. One number cannot suit
+    a photo whose corner sits in shadow — a value tuned for the lit half of
+    the page buries the shadowed half in false ink, or the reverse. It is
+    kept as a report figure (``m4_global_failure.png``) precisely because it
+    fails, not despite it.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        value: Pixels darker than this become ink.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``, values in ``{0, 255}``.
+    """
+    _, binary = cv2.threshold(grey, value, 255, cv2.THRESH_BINARY_INV)
+    return binary
+
+
+def otsu_between_class_variance(grey: np.ndarray) -> np.ndarray:
+    """Between-class variance at every candidate threshold, Otsu's own search
+    written out by hand rather than delegated to ``cv2.THRESH_OTSU``.
+
+    The idea: treat every level ``t`` as a hypothetical cut between "paper"
+    and "ink" pixels. A good cut is one where the two resulting classes are
+    each tight around their own mean and far apart from each other — that
+    separation is exactly what between-class variance measures, and it is
+    equivalent to minimising the variance *within* each class, which is
+    Otsu's original formulation.
+
+    For every ``t`` in 0..255:
+        ``w0, w1``  — fraction of pixels below / at-or-above ``t``
+        ``m0, m1``  — mean intensity of each class
+        ``variance = w0 * w1 * (m0 - m1) ** 2``
+
+    Computed with cumulative sums rather than a 256-iteration Python loop —
+    same maths, vectorised.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        ``float64`` array of length 256: the variance at each threshold.
+    """
+    histogram, _ = np.histogram(grey, bins=256, range=(0, 256))
+    total_pixels = histogram.sum()
+    if total_pixels == 0:
+        return np.zeros(256, dtype=np.float64)
+
+    probabilities = histogram.astype(np.float64) / total_pixels
+    levels = np.arange(256, dtype=np.float64)
+
+    weight0 = np.cumsum(probabilities)          # P(pixel <= t)
+    weight1 = 1.0 - weight0                      # P(pixel > t)
+    running_sum = np.cumsum(probabilities * levels)
+    total_mean = running_sum[-1]
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mean0 = np.where(weight0 > 0, running_sum / weight0, 0.0)
+        mean1 = np.where(weight1 > 0, (total_mean - running_sum) / weight1, 0.0)
+        variance = weight0 * weight1 * (mean0 - mean1) ** 2
+
+    return np.nan_to_num(variance, nan=0.0, posinf=0.0, neginf=0.0)
+
+
+def threshold_otsu(grey: np.ndarray) -> tuple[np.ndarray, int]:
+    """Otsu's method: the threshold that maximises between-class variance.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        ``(binary, threshold)`` — the binary image (ink = 255) and the
+        chosen threshold level, 0-255. Tested to land within one level of
+        ``cv2.threshold(..., cv2.THRESH_OTSU)`` (``tests/test_binarize.py``).
+    """
+    variance = otsu_between_class_variance(grey)
+    threshold = int(np.argmax(variance))
+    _, binary = cv2.threshold(grey, threshold, 255, cv2.THRESH_BINARY_INV)
+    return binary, threshold
+
+
+def threshold_adaptive(
+    grey: np.ndarray,
+    method: str = "gaussian",
+    block: int = ADAPTIVE_BLOCK,
+    c: int = ADAPTIVE_C,
+) -> np.ndarray:
+    """Locally adaptive threshold: each pixel is compared against the mean
+    (or gaussian-weighted mean) of its own ``block`` x ``block`` neighbourhood
+    rather than one global cut-off.
+
+    This is normally the winner on phone photos of paper, because a single
+    global value cannot be right everywhere at once when lighting drifts
+    across the page — a local window adapts as it slides.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"mean"`` | ``"gaussian"``. Gaussian weights neighbours
+            closer to the centre pixel more heavily, mean weights them all
+            the same.
+        block: Neighbourhood size in pixels. Must be odd and at least 3.
+        c: Constant subtracted from the local mean before comparing —
+            raising it makes the cut stricter, so fewer paper pixels flip
+            to ink.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``, ink = 255.
+
+    Raises:
+        ValueError: ``block`` is even or smaller than 3, or ``method`` is
+            not one of the two above.
+    """
+    if block < 3:
+        raise ValueError(f"block must be at least 3, got {block}")
+    if block % 2 == 0:
+        raise ValueError(f"block must be odd, got {block}")
+
+    if method == "mean":
+        adaptive_method = cv2.ADAPTIVE_THRESH_MEAN_C
+    elif method == "gaussian":
+        adaptive_method = cv2.ADAPTIVE_THRESH_GAUSSIAN_C
+    else:
+        raise ValueError(f"unknown adaptive method {method!r}")
+
+    return cv2.adaptiveThreshold(
+        grey, 255, adaptive_method, cv2.THRESH_BINARY_INV, block, c
+    )
+
+
+def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndarray:
+    """Sauvola's local threshold, purpose-built for document images.
+
+    Like :func:`threshold_adaptive`, the cut-off is local rather than global,
+    but the formula also scales with the local *standard deviation*: a
+    smooth patch of paper gets a threshold close to its own mean (so faint
+    texture is not read as ink), while a patch with real contrast — an edge
+    of a printed line or a pen stroke — gets a threshold pulled further from
+    the mean. That extra term is what ``skimage`` was built around for
+    scanned documents specifically, which is why it is worth comparing
+    against plain adaptive thresholding here (T5).
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        window: Local neighbourhood size in pixels. Must be odd and at
+            least 3.
+
+    Returns:
+        2-D ``uint8`` array, same shape as ``grey``, ink = 255.
+
+    Raises:
+        ValueError: ``window`` is even or smaller than 3.
+    """
+    if window < 3:
+        raise ValueError(f"window must be at least 3, got {window}")
+    if window % 2 == 0:
+        raise ValueError(f"window must be odd, got {window}")
+
+    # `r` (the dynamic range in Sauvola's formula) must be passed explicitly.
+    # Left to infer it, scikit-image reads it from the array's dtype limits —
+    # and a float array's limits are (-1, 1), so r becomes 1.0 instead of ~128.
+    # The local threshold then comes out around 1000 on 0-255 data and every
+    # pixel falls below it, turning the whole page to ink.
+    local_threshold = _sk_threshold_sauvola(
+        grey, window_size=window, k=SAUVOLA_K, r=SAUVOLA_R
+    )
+    return np.where(grey < local_threshold, 255, 0).astype(np.uint8)
+
+
+def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
+    """Thin every ink stroke down to a one-pixel-wide centre line.
+
+    Repeatedly peels boundary pixels off each stroke while preserving its
+    connectivity, so what is left is the stroke's topological skeleton: the
+    same shape and the same number of branches, one pixel thick.
+
+    This is what makes *stroke length* measurable. Counting raw ink pixels
+    conflates a long thin stroke with a short fat one — press harder with
+    the same pen and the pixel count rises without a single extra
+    centimetre of writing. Counting skeleton pixels measures the path the
+    pen actually travelled, independent of how heavily it was pressed,
+    which is why M6's ``stroke_length`` feature and M8's matching both read
+    this rather than the raw mask.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+
+    Returns:
+        2-D ``uint8`` array, same shape, ink = 255 — polarity preserved.
+    """
+    skeleton = _sk_skeletonize(binary > 0)
+    return (skeleton.astype(np.uint8)) * 255
+
+
+def line_survival_ratio(binary: np.ndarray) -> float:
+    """Estimate whether the printed table lines survive thresholding, as the
+    longest unbroken horizontal run of ink over the image width.
+
+    M5 has not landed yet, so there is no real line detector to ask "did
+    your lines survive?". This stands in for one. A method that keeps the
+    table borders intact leaves a long run behind; a method that shatters
+    them into dashes leaves only short ones.
+
+    Measured as a longest *run* rather than by opening with a wide
+    horizontal kernel, because the sheets are photographed a couple of
+    degrees off square and M2's perspective warp is not yet reliable — a
+    strictly horizontal kernel finds nothing on a line that drifts
+    vertically as it crosses the page, which makes the metric read zero for
+    every method and discriminate between none of them.
+
+    Two caveats worth keeping in mind when reading the number:
+
+    - It is a **relative** measure. Every method sees the same skew, so
+      comparing methods on one image is fair; the absolute value is not
+      meaningful until the sheet is genuinely flat.
+    - Read it next to ``ink_percent``, never alone. Heavy closing can weld
+      separate ink into one long run and inflate this while also gluing a
+      signature to the table border — the exact failure T6 warns about.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+
+    Returns:
+        Fraction in ``[0, 1]``: longest horizontal ink run over image width.
+    """
+    height, width = binary.shape[:2]
+    if width == 0:
+        return 0.0
+
+    is_ink = (binary > 0).astype(np.int8)
+    # Pad each row with a zero at both ends so every run has a rising and a
+    # falling edge, then read run lengths off the positions of those edges.
+    padded = np.zeros((height, width + 2), dtype=np.int8)
+    padded[:, 1:-1] = is_ink
+    longest = 0
+    for row in range(height):
+        edges = np.flatnonzero(np.diff(padded[row]))
+        if edges.size:
+            longest = max(longest, int(np.diff(edges)[::2].max()))
+    return longest / width
+
+
+def morph_open(
+    binary: np.ndarray,
+    kernel_size: int = MORPH_OPEN_K,
+    shape: str = MORPH_KERNEL_SHAPE,
+) -> np.ndarray:
+    """Morphological opening: erode then dilate.
+
+    Erosion deletes any ink blob smaller than the kernel — the isolated
+    specks that paper texture and sensor noise leave behind after
+    thresholding. Dilation then restores every surviving stroke to its
+    original thickness. Net effect: specks gone, real ink unchanged.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        kernel_size: Side of the structuring element in pixels. A size of
+            0 or 1 is a no-op, returned unchanged.
+        shape: Structuring element shape, see :func:`structuring_element`.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    if kernel_size <= 1:
+        return binary
+    return cv2.morphologyEx(
+        binary, cv2.MORPH_OPEN, structuring_element(shape, kernel_size)
+    )
+
+
+def morph_close(
+    binary: np.ndarray,
+    kernel_size: int = MORPH_CLOSE_K,
+    shape: str = MORPH_KERNEL_SHAPE,
+) -> np.ndarray:
+    """Morphological closing: dilate then erode.
+
+    Dilation grows every stroke outward, so a hairline gap where the pen
+    skipped gets bridged; erosion then shrinks the strokes back, keeping
+    the bridge. Net effect: broken strokes repaired.
+
+    The danger runs the other way from opening: a kernel big enough to
+    bridge a 3-pixel pen skip is also big enough to weld a signature to the
+    printed table line above it, and M6 then measures a signature that is
+    40% table. That is why the kernel here stays small and tunable in
+    ``config.py`` — see the T6 note in BUILD_SPEC.md section 9.4.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        kernel_size: Side of the structuring element in pixels. A size of
+            0 or 1 is a no-op, returned unchanged.
+        shape: Structuring element shape, see :func:`structuring_element`.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    if kernel_size <= 1:
+        return binary
+    return cv2.morphologyEx(
+        binary, cv2.MORPH_CLOSE, structuring_element(shape, kernel_size)
+    )
+
+
+def morph_clean(
+    binary: np.ndarray,
+    open_k: int = MORPH_OPEN_K,
+    close_k: int = MORPH_CLOSE_K,
+    shape: str = MORPH_KERNEL_SHAPE,
+) -> np.ndarray:
+    """The full clean-up: opening first (kill specks), closing second
+    (repair strokes).
+
+    Order matters. Closing first would weld nearby specks into blobs big
+    enough for the subsequent opening to keep, so the noise would survive.
+    Opening first removes them while they are still small and isolated.
+
+    Args:
+        binary: 2-D ``uint8`` image, ink = 255.
+        open_k: Opening kernel size, see :func:`morph_open`.
+        close_k: Closing kernel size, see :func:`morph_close`.
+        shape: Structuring element shape, see :func:`structuring_element`.
+
+    Returns:
+        2-D ``uint8`` array, same shape, still strictly two-valued.
+    """
+    return morph_close(morph_open(binary, open_k, shape), close_k, shape)
+
+
+def apply_threshold(grey: np.ndarray, method: str) -> np.ndarray:
+    """Binarise by name, so the method is a config value rather than an
+    ``if`` chain repeated at every call site.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+        method: ``"global"`` | ``"otsu"`` | ``"adaptive"`` | ``"sauvola"``.
+
+    Returns:
+        2-D ``uint8`` array, ink = 255.
+
+    Raises:
+        ValueError: ``method`` is not one of the four above. Never falls
+            through to a silent default — a typo in ``config.py`` should
+            stop the run, not quietly change which algorithm ran.
+    """
+    if method == "global":
+        return threshold_global(grey)
+    if method == "otsu":
+        return threshold_otsu(grey)[0]
+    if method == "adaptive":
+        return threshold_adaptive(grey)
+    if method == "sauvola":
+        return threshold_sauvola(grey)
+    raise ValueError(
+        f"unknown binarisation method {method!r}, expected one of "
+        "['global', 'otsu', 'adaptive', 'sauvola']"
+    )
+
+
+def compare_methods(grey: np.ndarray) -> list[dict]:
+    """Run all four thresholding methods on the same image and measure each.
+
+    T5 asks for a measured comparison, not a claim about which one "looks
+    best". Per method: ink percentage (should be a few percent of the page,
+    not 40), connected component count (fewer specks is cleaner), the line
+    survival estimate above, and wall-clock runtime.
+
+    Args:
+        grey: 2-D ``uint8`` greyscale image.
+
+    Returns:
+        One dict per method — keys ``method``, ``binary``, ``ink_percent``,
+        ``components``, ``line_survival``, ``runtime_s`` — in the order
+        global, otsu, adaptive, sauvola.
+    """
+    results = []
+    for name in ("global", "otsu", "adaptive", "sauvola"):
+        started = time.perf_counter()
+        binary = apply_threshold(grey, name)
+        elapsed = time.perf_counter() - started
+
+        n_labels, _ = cv2.connectedComponents(binary)
+        results.append(
+            {
+                "method": name,
+                "binary": binary,
+                "ink_percent": 100.0 * np.count_nonzero(binary) / binary.size,
+                "components": n_labels - 1,  # label 0 is the background
+                "line_survival": line_survival_ratio(binary),
+                "runtime_s": elapsed,
+            }
+        )
+    return results
+
+
+def clean_signature_crop(mask: np.ndarray, skeleton: bool = False) -> np.ndarray:
+    """Clean one small signature crop for M8's recognition work.
+
+    Same operations as :func:`morph_clean`, different scale. The whole-sheet
+    kernels are sized against a 1600-pixel-wide page; a signature crop is a
+    couple of hundred pixels across, and reusing those kernels on it erodes
+    a thin ballpoint stroke to nothing. This uses
+    ``config.SIG_MORPH_OPEN_K`` / ``SIG_MORPH_CLOSE_K`` instead — opening
+    small enough to leave a hairline stroke intact, closing sized to bridge
+    the pen skips that a fast signature is full of.
+
+    Args:
+        mask: 2-D ``uint8`` crop, ink = 255. M6's per-cell mask.
+        skeleton: When ``True``, also thin the result to one-pixel strokes
+            (see :func:`skeletonize_ink`). M8 wants the filled mask for
+            shape comparison and the skeleton for stroke-length features,
+            so both are available from one call.
+
+    Returns:
+        2-D ``uint8`` array, same shape, ink = 255.
+    """
+    cleaned = morph_clean(mask, open_k=SIG_MORPH_OPEN_K, close_k=SIG_MORPH_CLOSE_K)
+    return skeletonize_ink(cleaned) if skeleton else cleaned
+
+
+class BinarizeStage(Stage):
+    """Turns M3's ``ctx["grey"]`` into a clean two-valued ``ctx["binary"]``.
+
+    Chain: threshold (method from ``config.BINARIZE_METHOD``) -> opening ->
+    closing. Every parameter comes from ``src.config``, so retuning the
+    stage is a config edit rather than a code edit.
+
+    The output contract the rest of the project depends on: ``uint8``,
+    values strictly ``{0, 255}``, **ink 255 and paper 0**. M5, M6 and M7 all
+    assume that polarity, and getting it backwards breaks all three at once
+    without raising anything.
+    """
+
+    name = "binarize"
+
+    def __init__(self) -> None:
+        self._steps: dict[str, np.ndarray] = {}
+
+    def run(self, ctx: dict) -> dict:
+        grey = ctx["grey"]
+        raw = apply_threshold(grey, BINARIZE_METHOD)
+        cleaned = morph_clean(raw)
+
+        ink_percent = 100.0 * np.count_nonzero(cleaned) / cleaned.size
+        log.info(
+            "method=%s  ink=%.2f%%  kernels open=%d close=%d (%s)",
+            BINARIZE_METHOD,
+            ink_percent,
+            MORPH_OPEN_K,
+            MORPH_CLOSE_K,
+            MORPH_KERNEL_SHAPE,
+        )
+        # A page of handwriting on ruled paper is a few percent ink. Double
+        # digits means the threshold is reading paper texture or shadow as
+        # ink, and M5's line detection will drown in it.
+        if ink_percent > 20.0:
+            log.warning(
+                "ink coverage %.1f%% is far above the few percent a signing "
+                "sheet should show — check the %s threshold settings",
+                ink_percent,
+                BINARIZE_METHOD,
+            )
+
+        ctx["binary"] = cleaned
+        self._steps = {"binary raw": raw, "binary cleaned": cleaned}
+        return ctx
+
+    def figures(self) -> dict[str, np.ndarray]:
+        return dict(self._steps)

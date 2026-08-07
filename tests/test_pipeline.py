@@ -247,6 +247,58 @@ def test_every_command_has_working_help(command: str) -> None:
     assert result.stdout.startswith(f"usage: {command}")
 
 
+def test_nobody_calls_houghlinesp_directly() -> None:
+    """The OpenCV 4 to 5 return-shape change must be handled in one place.
+
+    ``cv2.HoughLinesP`` returns ``(N, 1, 4)`` on OpenCV 4 and ``(N, 4)`` on the
+    OpenCV 5 we pin. Code copied from any tutorial indexes ``lines[:, 0]`` and
+    dies on the first real image. It has already cost M2 (PR #3) and M5
+    (PR #11), both times found only by running the pipeline on a real sheet.
+
+    ``src.utils.cvcompat.hough_line_segments`` normalises it. This test fails
+    the build if anyone reaches past it.
+    """
+    allowed = {"cvcompat.py"}
+    offenders: list[str] = []
+    for path in (REPO_ROOT / "src").rglob("*.py"):
+        if path.name in allowed:
+            continue
+        if "cv2.HoughLinesP" in path.read_text(encoding="utf-8"):
+            offenders.append(str(path.relative_to(REPO_ROOT)))
+
+    assert not offenders, (
+        "call src.utils.cvcompat.hough_line_segments instead of cv2.HoughLinesP in:\n  "
+        + "\n  ".join(offenders)
+    )
+
+
+def test_hough_wrapper_returns_a_flat_array_of_segments() -> None:
+    """Whatever OpenCV hands back, callers get ``(N, 4)`` they can unpack."""
+    import cv2
+
+    from src.utils.cvcompat import hough_line_segments
+
+    image = np.zeros((200, 400), np.uint8)
+    cv2.line(image, (20, 100), (380, 100), 255, 3)
+
+    segments = hough_line_segments(image, threshold=50, min_line_length=100)
+
+    assert segments.ndim == 2 and segments.shape[1] == 4
+    for x1, y1, x2, y2 in segments:  # must not raise
+        assert isinstance(int(x1), int)
+    assert len(segments) >= 1
+
+
+def test_hough_wrapper_returns_empty_not_none_when_nothing_is_found() -> None:
+    """Callers iterate unconditionally rather than each writing a None guard."""
+    from src.utils.cvcompat import hough_line_segments
+
+    segments = hough_line_segments(np.zeros((50, 50), np.uint8))
+
+    assert segments.shape == (0, 4)
+    assert list(segments) == []
+
+
 def test_infovis_without_an_index_explains_itself() -> None:
     result = subprocess.run(
         [sys.executable, "infovis.py"],

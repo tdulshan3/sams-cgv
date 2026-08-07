@@ -21,6 +21,10 @@ from pathlib import Path
 from src import config, stubs
 from src.models import AttendanceRecord, SheetMeta, Student
 from src.pipeline import Pipeline
+from src.preprocess.binarize import BinarizeStage
+from src.preprocess.deskew import GeometryStage
+from src.preprocess.enhance import EnhanceStage
+from src.table.cell_extract import TableStage
 from src.utils.logging import collect_warnings, get_logger, set_debug
 from src.utils.stage import Stage
 from src.viz.progress import ProgressViewer
@@ -34,10 +38,10 @@ MAX_SUMMARY_WARNINGS = 5
 """Warnings listed in full before the rest are counted instead."""
 
 STAGES: list[Callable[[], Stage]] = [
-    stubs.GeometryStub,   # M2 — src.preprocess.deskew
-    stubs.EnhanceStub,    # M3 — src.preprocess.enhance
-    stubs.BinarizeStub,   # M4 — src.preprocess.binarize
-    stubs.TableStub,      # M5 — src.table.cell_extract
+    GeometryStage,        # M2 — real, merged in #8
+    EnhanceStage,         # M3 — real, merged in #9
+    BinarizeStage,        # M4 — real, merged in #10
+    TableStage,           # M5 — real, merged in #11
     stubs.InkStub,        # M6 — src.detect.ink_mask
     stubs.DecisionStub,   # M7 — src.detect.presence
 ]

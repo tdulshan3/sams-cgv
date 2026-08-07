@@ -16,10 +16,11 @@ three commands, and those are the whole interface.
 
 ## What state this is in
 
-The pipeline, the three programs, the step-by-step viewer and the shared
-contracts are finished. The seven image processing modules are owned by other
-members of the group and are still standing in as placeholders, so every
-command runs end to end today but reports zero students. Each placeholder
+The pipeline, the three programs, the step-by-step viewer, and the shared
+contracts (M1) are finished. The Acquisition & Geometry Correction stage (M2) 
+is also completed and integrated. The remaining six image processing modules 
+are owned by other members of the group and are still standing in as placeholders, 
+so every command runs end to end today but reports zero students. Each placeholder
 announces itself:
 
 ```
@@ -158,7 +159,7 @@ pytest -q
 
 ## Known limits
 
-* The seven image processing modules are placeholders, so attendance counts are
+* Six of the image processing modules are placeholders, so attendance counts are
   zero until they land.
 * `info.xml` was not supplied with the sheet photos. It is reconstructed from
   Figure 1 of the brief and the printed student table. The brief's own example
