@@ -225,6 +225,35 @@ def count_components(mask: np.ndarray) -> int:
     return max(0, num_labels - 1)
 
 
+def compute_stroke_bbox_and_aspect(
+    mask: np.ndarray,
+) -> tuple[tuple[int, int, int, int] | None, float]:
+    """Compute bounding box (x, y, w, h) of ink content and its aspect ratio (w / h).
+
+    Args:
+        mask: uint8 binary mask (ink=255, background=0).
+
+    Returns:
+        tuple containing:
+            - stroke_bbox: (x, y, w, h) tuple or None if mask is empty.
+            - aspect: width / height ratio of the bounding box.
+    """
+    if mask is None or mask.size == 0 or not np.any(mask):
+        return None, 0.0
+
+    y_indices, x_indices = np.where(mask > 0)
+    x_min, x_max = int(np.min(x_indices)), int(np.max(x_indices))
+    y_min, y_max = int(np.min(y_indices)), int(np.max(y_indices))
+
+    w = x_max - x_min + 1
+    h = y_max - y_min + 1
+
+    stroke_bbox = (x_min, y_min, w, h)
+    aspect = float(w / h) if h > 0 else 0.0
+
+    return stroke_bbox, aspect
+
+
 def ink_features(mask: np.ndarray) -> dict:
     """Extract ink features for decision stage (M7).
 
@@ -232,8 +261,8 @@ def ink_features(mask: np.ndarray) -> dict:
         mask: uint8 binary mask (ink=255, background=0).
 
     Returns:
-        Dictionary containing ink_ratio, components, and placeholders for
-        subsequent feature computations.
+        Dictionary containing ink_ratio, components, stroke_bbox, aspect,
+        stroke_length, filled_ratio, centroid_offset.
     """
     if mask is None or mask.size == 0:
         return {
@@ -248,16 +277,18 @@ def ink_features(mask: np.ndarray) -> dict:
 
     ratio = compute_ink_ratio(mask)
     num_comps = count_components(mask)
+    bbox, aspect = compute_stroke_bbox_and_aspect(mask)
 
     return {
         "ink_ratio": ratio,
         "components": num_comps,
-        "stroke_bbox": None,
-        "aspect": 0.0,
+        "stroke_bbox": bbox,
+        "aspect": aspect,
         "stroke_length": 0,
         "filled_ratio": 0.0,
         "centroid_offset": 0.0,
     }
+
 
 
 def count_pen_colours(cells_bgr: list[np.ndarray], masks: list[np.ndarray]) -> dict[str, int]:

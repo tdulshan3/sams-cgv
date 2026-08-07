@@ -268,6 +268,20 @@ def test_ink_features_basic():
     assert feats_stroke["components"] == 1
 
 
+def test_ink_features_bbox_aspect():
+    """Verify stroke_bbox and aspect ratio feature computations."""
+    from src.detect.ink_mask import ink_features
+
+    # Signature-like wide stroke: y from 10 to 30 (h=20), x from 10 to 90 (w=80)
+    mask = np.zeros((60, 120), dtype=np.uint8)
+    mask[10:30, 10:90] = 255
+
+    feats = ink_features(mask)
+    assert feats["stroke_bbox"] == (10, 10, 80, 20)
+    assert feats["aspect"] == pytest.approx(80 / 20)  # 4.0
+
+
+
 
 
 
