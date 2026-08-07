@@ -12,10 +12,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import combinations
+from collections.abc import Sequence
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 
 from src import config
 from src.recognise import features
@@ -174,6 +178,289 @@ class MatchScore:
     """One of ``"match"``, ``"mismatch"``, ``"uncertain"`` — see :func:`_verdict`."""
 
 
+@dataclass(frozen=True)
+class PairComparison:
+    """A scored pair of signature samples."""
+
+    left: SignatureSample
+    right: SignatureSample
+    score: MatchScore
+
+
+def short_sheet_date(sheet_date: str) -> str:
+    """Return the short date label used in tables and figures."""
+    try:
+        return datetime.strptime(sheet_date, SHEET_DATE_FORMAT).strftime("%d.%m")
+    except ValueError:
+        return sheet_date
+
+
+def discover_student_indices() -> list[str]:
+    """Return every student index with at least one saved crop."""
+    if not config.CELLS.is_dir():
+        return []
+
+    indices: set[str] = set()
+    for cell_dir in config.CELLS.iterdir():
+        if not cell_dir.is_dir():
+            continue
+        for crop_path in cell_dir.glob("*.png"):
+            if crop_path.name.endswith("_mask.png"):
+                continue
+            indices.add(crop_path.stem)
+    return sorted(indices)
+
+
+def student_name(index: str) -> str:
+    """Return the student's name from ``data/info.xml`` when available."""
+    if not config.INFO_XML.is_file():
+        return index
+
+    try:
+        tree = ET.parse(config.INFO_XML)
+    except ET.ParseError:
+        return index
+
+    for student in tree.findall(".//student"):
+        found_index = student.findtext("index")
+        if found_index == index:
+            name = student.findtext("name")
+            return name.strip() if name else index
+    return index
+
+
+def load_all_samples() -> dict[str, list[SignatureSample]]:
+    """Load all samples grouped by student index."""
+    return {index: load_samples(index) for index in discover_student_indices()}
+
+
+def pairwise_comparisons(samples: Sequence[SignatureSample]) -> list[PairComparison]:
+    """Compare every unique pair of ``samples``."""
+    comparisons: list[PairComparison] = []
+    for left, right in combinations(samples, 2):
+        comparisons.append(PairComparison(left=left, right=right, score=compare(left.mask, right.mask)))
+    return comparisons
+
+
+def compare_all_students(samples_by_student: dict[str, list[SignatureSample]]) -> tuple[list[PairComparison], list[PairComparison]]:
+    """Build all genuine and impostor pair scores from the loaded samples."""
+    genuine: list[PairComparison] = []
+    impostor: list[PairComparison] = []
+
+    for samples in samples_by_student.values():
+        genuine.extend(pairwise_comparisons(samples))
+
+    student_items = list(samples_by_student.items())
+    for left_index, left_samples in student_items:
+        for right_index, right_samples in student_items:
+            if left_index >= right_index:
+                continue
+            for left_sample in left_samples:
+                for right_sample in right_samples:
+                    impostor.append(
+                        PairComparison(
+                            left=left_sample,
+                            right=right_sample,
+                            score=compare(left_sample.mask, right_sample.mask),
+                        )
+                    )
+
+    return genuine, impostor
+
+
+def combined_score_matrix(samples: Sequence[SignatureSample]) -> np.ndarray:
+    """Return the symmetric matrix of combined similarity scores."""
+    count = len(samples)
+    matrix = np.zeros((count, count), dtype=np.float64)
+    for row in range(count):
+        matrix[row, row] = 1.0
+        for column in range(row + 1, count):
+            score = compare(samples[row].mask, samples[column].mask).combined
+            matrix[row, column] = score
+            matrix[column, row] = score
+    return matrix
+
+
+def mean_similarities(matrix: np.ndarray) -> np.ndarray:
+    """Return the mean similarity of each row to all the other rows."""
+    if matrix.size == 0:
+        return np.array([], dtype=np.float64)
+    if matrix.shape[0] == 1:
+        return np.array([1.0], dtype=np.float64)
+
+    totals = matrix.sum(axis=1) - np.diag(matrix)
+    return totals / (matrix.shape[0] - 1)
+
+
+def flagged_outlier(samples: Sequence[SignatureSample]) -> tuple[int, np.ndarray] | None:
+    """Return the least similar sample and all per-sample mean similarities."""
+    if len(samples) < 2:
+        return None
+    matrix = combined_score_matrix(samples)
+    means = mean_similarities(matrix)
+    return int(np.argmin(means)), means
+
+
+def feature_separation(genuine: Sequence[PairComparison], impostor: Sequence[PairComparison]) -> dict[str, float]:
+    """Measure how far apart genuine and impostor averages are per feature."""
+    features_to_measure = ("ssim", "hog", "hu", "orb", "custom", "combined")
+    separation: dict[str, float] = {}
+
+    for name in features_to_measure:
+        genuine_scores = np.array([getattr(pair.score, name) for pair in genuine], dtype=np.float64)
+        impostor_scores = np.array([getattr(pair.score, name) for pair in impostor], dtype=np.float64)
+        if genuine_scores.size == 0 or impostor_scores.size == 0:
+            separation[name] = 0.0
+            continue
+        separation[name] = float(genuine_scores.mean() - impostor_scores.mean())
+
+    return separation
+
+
+def threshold_curve(genuine_scores: Sequence[float], impostor_scores: Sequence[float]) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
+    """Compute FAR and FRR across thresholds and return the EER point."""
+    genuine_array = np.asarray(list(genuine_scores), dtype=np.float64)
+    impostor_array = np.asarray(list(impostor_scores), dtype=np.float64)
+
+    if genuine_array.size == 0 or impostor_array.size == 0:
+        empty = np.array([], dtype=np.float64)
+        return empty, empty, empty, float("nan"), float("nan")
+
+    thresholds = np.unique(np.concatenate(([0.0], genuine_array, impostor_array, [1.0])))
+    fars = np.empty_like(thresholds, dtype=np.float64)
+    frrs = np.empty_like(thresholds, dtype=np.float64)
+
+    for index, threshold in enumerate(thresholds):
+        fars[index] = float(np.mean(impostor_array >= threshold))
+        frrs[index] = float(np.mean(genuine_array < threshold))
+
+    differences = np.abs(fars - frrs)
+    eer_index = int(np.argmin(differences))
+    eer_threshold = float(thresholds[eer_index])
+    eer_rate = float((fars[eer_index] + frrs[eer_index]) / 2.0)
+    return thresholds, fars, frrs, eer_threshold, eer_rate
+
+
+def _save_figure(figure: plt.Figure, path: Path) -> None:
+    """Save a figure at the project dpi and close it immediately."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=config.FIGURE_DPI, bbox_inches="tight")
+    plt.close(figure)
+
+
+def save_similarity_matrix_figure(samples: Sequence[SignatureSample], out_path: Path, *, title: str | None = None) -> tuple[int, np.ndarray] | None:
+    """Save a heatmap of combined pairwise similarities for one student."""
+    if len(samples) < 2:
+        return None
+
+    matrix = combined_score_matrix(samples)
+    means = mean_similarities(matrix)
+    figure, axis = plt.subplots(figsize=(max(4.5, len(samples) * 1.2), max(4.0, len(samples) * 1.0)))
+    heatmap = axis.imshow(matrix, vmin=0.0, vmax=1.0, cmap="viridis")
+    axis.set_xticks(range(len(samples)))
+    axis.set_yticks(range(len(samples)))
+    axis.set_xticklabels([short_sheet_date(sample.sheet_date) for sample in samples], rotation=45, ha="right")
+    axis.set_yticklabels([short_sheet_date(sample.sheet_date) for sample in samples])
+    axis.set_xlabel("sheet date")
+    axis.set_ylabel("sheet date")
+    if title is not None:
+        axis.set_title(title)
+    figure.colorbar(heatmap, ax=axis, fraction=0.046, pad=0.04, label="combined score")
+    for row in range(len(samples)):
+        for column in range(len(samples)):
+            axis.text(
+                column,
+                row,
+                f"{matrix[row, column]:.2f}",
+                ha="center",
+                va="center",
+                color="white" if matrix[row, column] < 0.55 else "black",
+                fontsize=8,
+            )
+    _save_figure(figure, out_path)
+    return flagged_outlier(samples)
+
+
+def save_feature_separation_figure(separation: dict[str, float], out_path: Path) -> None:
+    """Plot the genuine-vs-impostor separation for each feature."""
+    features_order = ["ssim", "hog", "hu", "orb", "custom", "combined"]
+    values = [separation.get(name, 0.0) for name in features_order]
+
+    figure, axis = plt.subplots(figsize=(7.5, 4.5))
+    bars = axis.bar(features_order, values, color=["#3b82f6" if value >= 0 else "#ef4444" for value in values])
+    axis.axhline(0.0, color="#222", linewidth=0.8)
+    axis.set_ylabel("mean(genuine) - mean(impostor)")
+    axis.set_title("Feature separation")
+    for bar, value in zip(bars, values, strict=False):
+        axis.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            value,
+            f"{value:.3f}",
+            ha="center",
+            va="bottom" if value >= 0 else "top",
+            fontsize=8,
+        )
+    _save_figure(figure, out_path)
+
+
+def save_threshold_curve_figure(thresholds: np.ndarray, fars: np.ndarray, frrs: np.ndarray, eer_threshold: float, eer_rate: float, out_path: Path) -> None:
+    """Plot FAR and FRR as the combined threshold sweeps from low to high."""
+    figure, axis = plt.subplots(figsize=(7.5, 4.5))
+    axis.plot(thresholds, fars, label="FAR", color="#ef4444")
+    axis.plot(thresholds, frrs, label="FRR", color="#2563eb")
+    axis.scatter([eer_threshold], [eer_rate], color="#111", zorder=5, label=f"EER {eer_rate:.3f} @ {eer_threshold:.3f}")
+    axis.set_xlabel("combined threshold")
+    axis.set_ylabel("rate")
+    axis.set_ylim(0.0, 1.0)
+    axis.set_title("FAR / FRR threshold sweep")
+    axis.legend()
+    _save_figure(figure, out_path)
+
+
+def save_pair_distribution_figure(genuine_scores: Sequence[float], impostor_scores: Sequence[float], out_path: Path) -> None:
+    """Plot the genuine and impostor combined-score distributions together."""
+    figure, axis = plt.subplots(figsize=(7.5, 4.5))
+    bins = np.linspace(0.0, 1.0, 26)
+    axis.hist(genuine_scores, bins=bins, alpha=0.65, label="genuine", color="#2563eb")
+    axis.hist(impostor_scores, bins=bins, alpha=0.65, label="impostor", color="#ef4444")
+    axis.set_xlabel("combined score")
+    axis.set_ylabel("pair count")
+    axis.set_title("Signature score distributions")
+    axis.legend()
+    _save_figure(figure, out_path)
+
+
+def _format_pair_row(left: SignatureSample, right: SignatureSample, score: MatchScore) -> str:
+    """Format one row of the investigate score table."""
+    pair_label = f"{short_sheet_date(left.sheet_date)} vs {short_sheet_date(right.sheet_date)}"
+    return (
+        f"  {pair_label:<27} "
+        f"{score.ssim:>5.2f}   {score.hog:>5.2f}   {score.hu:>5.2f}   {score.orb:>5.2f}   {score.custom:>5.2f}   {score.combined:>7.2f}  {score.verdict}"
+    )
+
+
+def _investigate_summary(samples: Sequence[SignatureSample], comparisons: Sequence[PairComparison]) -> str:
+    """Build the final verdict line for :func:`investigate`."""
+    if not comparisons:
+        return "Verdict: all samples match."
+
+    if all(pair.score.verdict == "match" for pair in comparisons):
+        return "Verdict: all samples match."
+
+    outlier = flagged_outlier(samples)
+    if outlier is None:
+        return "Verdict: all samples match."
+
+    outlier_index, means = outlier
+    outlier_sample = samples[outlier_index]
+    other_means = np.delete(means, outlier_index)
+    other_mean = float(other_means.mean()) if other_means.size else float(means[outlier_index])
+    return (
+        f"Verdict: signature on {outlier_sample.sheet_date} does not match the others "
+        f"(mean {means[outlier_index]:.2f} vs {other_mean:.2f})."
+    )
+
+
 def _weighted_combine(ssim: float, hog: float, hu: float, orb: float, custom: float) -> float:
     """Combine the five feature scores into one, using ``config.SCORE_WEIGHTS``.
 
@@ -289,9 +576,35 @@ def investigate(index: str, save_only: bool = False) -> None:
         )
         return
 
-    # T3/T4: per-pair feature scoring and verdicts.
-    # T6: outlier detection across the whole set.
-    # T7: table + verdict printout, figure saving (uses `save_only`).
-    raise NotImplementedError(
-        "comparison logic lands in T3-T7 — sample loading (T1) is done and tested"
-    )
+    comparisons = pairwise_comparisons(samples)
+
+    print(f"Student {index} — {student_name(index)} — {len(samples)} samples")
+    print("  pair                        SSIM   HOG    HU     ORB    OWN    COMBINED")
+    for comparison in comparisons:
+        print(_format_pair_row(comparison.left, comparison.right, comparison.score))
+
+    print(_investigate_summary(samples, comparisons))
+
+    matrix = combined_score_matrix(samples)
+    means = mean_similarities(matrix)
+    outlier_index = int(np.argmin(means)) if means.size else -1
+
+    figure_path = config.FIGURES / f"m8_investigate_{index}.png"
+    figure_path.parent.mkdir(parents=True, exist_ok=True)
+    figure, axes = plt.subplots(1, len(samples), figsize=(max(6.0, 2.4 * len(samples)), 3.8), squeeze=False)
+    axes_row = axes[0]
+    for position, (axis, sample, mean_score) in enumerate(zip(axes_row, samples, means, strict=False)):
+        axis.imshow(sample.crop if sample.crop is not None else sample.mask, cmap=None if sample.crop is not None else "gray")
+        axis.set_title(f"{short_sheet_date(sample.sheet_date)}\nmean {mean_score:.2f}", fontsize=9)
+        axis.axis("off")
+        if position == outlier_index:
+            for spine in axis.spines.values():
+                spine.set_edgecolor("#ef4444")
+                spine.set_linewidth(3.0)
+
+    figure.suptitle(f"Student {index} signature comparison", fontsize=12)
+    figure.tight_layout()
+    _save_figure(figure, figure_path)
+
+    if not save_only:
+        plt.show()
