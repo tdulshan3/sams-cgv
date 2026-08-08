@@ -318,20 +318,28 @@ PEN_HUE_RANGES = {
 
 # --- M7 decision ---
 
-INK_RATIO_THRESHOLD = 0.012
+INK_RATIO_THRESHOLD = 0.036
 """Ink coverage a signature cell must reach before it counts as signed.
 
-Provisional until the T5 sweep against ``data/ground_truth.csv`` replaces it
-with a measured value. Set from that curve, never by eye."""
+Measured, not chosen — ``python tools/tune_threshold.py`` sweeps this against
+the 30 hand-labelled cells in ``data/ground_truth.csv``. The sweep has no peak,
+it has a plateau: every value between the highest genuinely-blank cell (0.0173,
+05.07.2019 / 10009301) and the lowest real signature (0.0546, 12.07.2019 /
+10009302) scores identically, because no cell lies between them. This is the
+midpoint of that plateau — the value furthest from being wrong about any cell
+we have actually seen."""
 
 MIN_COMPONENTS = 1
 """Connected components a signature must have. Zero means the cell is blank."""
 
-MIN_STROKE_LENGTH = 25
+MIN_STROKE_LENGTH = 100
 """Skeleton pixels a signature must have — how far the pen actually travelled.
 
 Guards the case ink ratio alone cannot: a short thick mark can cover as many
-pixels as a thin sprawling signature, so coverage on its own would accept it."""
+pixels as a thin sprawling signature, so coverage on its own would accept it.
+Measured the same way as the ink threshold — every genuine signature in the 30
+cells has a skeleton of at least 132 pixels, the faint marks on 05.07.2019 /
+10009301 reach 60, and 100 sits between them."""
 
 CONF_LOW, CONF_HIGH = 0.008, 0.030
 """Ink ratios treated as confidently blank and confidently signed.
