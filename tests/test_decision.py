@@ -115,15 +115,23 @@ def test_sweep_rule_matches_decide():
             aspect=4.0,
             filled_ratio=0.0,
         )
-        swept = predict(
+        pipeline, _ = decide(make_ink(ink_ratio, components, stroke_length))
+
+        explicit = predict(
             sample,
             config.INK_RATIO_THRESHOLD,
             min_stroke=config.MIN_STROKE_LENGTH,
             min_components=config.MIN_COMPONENTS,
             max_ink=config.MAX_INK_RATIO,
         )
-        pipeline, _ = decide(make_ink(ink_ratio, components, stroke_length))
-        assert swept == pipeline, f"rules disagree on ink={ink_ratio}"
+        assert explicit == pipeline, f"rules disagree on ink={ink_ratio}"
+
+        # And with the thresholds left out, which is how the sweep calls it.
+        # These defaulted to something other than the configured values once,
+        # so the tool scored a rule the pipeline does not run: the ``ab`` cell
+        # came back present from the sweep and absent from the pipeline.
+        defaulted = predict(sample, config.INK_RATIO_THRESHOLD)
+        assert defaulted == pipeline, f"defaults diverge from decide() on ink={ink_ratio}"
 
 
 def test_rows_map_to_students_by_position():

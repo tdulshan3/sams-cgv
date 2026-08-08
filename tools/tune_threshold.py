@@ -100,7 +100,7 @@ def collect_features() -> list[CellSample]:
     see M6's raw measurements, not a verdict already made with the thresholds
     being tuned.
     """
-    from src.detect.ink_mask import InkStage
+    from src.detect.ink_mask import InkStage, ink_features
     from src.preprocess.binarize import BinarizeStage
     from src.preprocess.deskew import GeometryStage
     from src.preprocess.enhance import EnhanceStage
@@ -130,6 +130,13 @@ def collect_features() -> list[CellSample]:
             if present < 0:
                 log.warning("no ground truth for %s on %s", student.index, path.stem)
                 continue
+            # filled_ratio is how much of the stroke's own bounding box the ink
+            # fills, and it is the feature that would separate a compact blob
+            # from a sprawling signature. InkResult does not carry it, so it is
+            # recomputed from the mask rather than recorded as a placeholder —
+            # a column of zeros in the cache would look like a measurement and
+            # be quoted as one.
+            extra = ink_features(result.mask) if result.mask is not None else {}
             samples.append(
                 CellSample(
                     sheet_date=path.stem,
@@ -139,7 +146,7 @@ def collect_features() -> list[CellSample]:
                     components=int(result.components),
                     stroke_length=int(result.stroke_length),
                     aspect=float(result.aspect),
-                    filled_ratio=0.0,
+                    filled_ratio=float(extra.get("filled_ratio", 0.0)),
                     note=note,
                 )
             )
@@ -186,16 +193,25 @@ def load_features(path: Path = FEATURES_CSV) -> list[CellSample]:
 def predict(
     sample: CellSample,
     threshold: float,
-    min_stroke: int = config.MIN_STROKE_LENGTH,
-    min_components: int = config.MIN_COMPONENTS,
-    max_ink: float = 1.0,
+    min_stroke: int | None = None,
+    min_components: int | None = None,
+    max_ink: float | None = None,
 ) -> bool:
     """The decision rule, with its thresholds passed in so they can be swept.
 
     Kept deliberately in step with :func:`src.detect.presence.decide`; the
     sweep would be worthless if it measured a different rule from the one the
     pipeline runs. ``tests/test_decision.py`` asserts the two agree.
+
+    Every threshold defaults to the configured one, so calling this with only a
+    candidate ink threshold measures exactly what the pipeline would do. The
+    defaults are resolved here rather than in the signature because a default
+    argument is evaluated at import time, which would freeze the configured
+    values and silently ignore any later tuning of them.
     """
+    min_stroke = config.MIN_STROKE_LENGTH if min_stroke is None else min_stroke
+    min_components = config.MIN_COMPONENTS if min_components is None else min_components
+    max_ink = config.MAX_INK_RATIO if max_ink is None else max_ink
     return (
         threshold <= sample.ink_ratio <= max_ink
         and sample.components >= min_components
