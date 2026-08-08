@@ -275,3 +275,24 @@ class Database:
                 (student_index,),
             ).fetchone()
         return dict(row) if row else None
+
+
+def known_indices() -> list[str]:
+    """Every student index the database has an attendance record for.
+
+    Called by ``infovis.py`` and ``investigate.py`` through ``src/cli.py`` to
+    suggest valid indices when the user mistypes one, so it must never raise:
+    no database file yet is a normal state, not an error.
+    """
+    if not config.DB_PATH.is_file():
+        return []
+    with Database().connect() as connection:
+        rows = connection.execute(
+            "SELECT DISTINCT student_index FROM attendance ORDER BY student_index"
+        ).fetchall()
+    return [str(row["student_index"]) for row in rows]
+
+
+def is_empty() -> bool:
+    """``True`` when no attendance has been stored yet."""
+    return not known_indices()
