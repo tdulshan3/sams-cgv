@@ -62,6 +62,18 @@ CREATE TABLE IF NOT EXISTS attendance (
     FOREIGN KEY (student_index) REFERENCES students(student_index),
     FOREIGN KEY (sheet_id)      REFERENCES sheets(id)
 );
+CREATE TABLE IF NOT EXISTS signatures (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_index TEXT NOT NULL,
+    sheet_id      INTEGER NOT NULL,
+    crop_path     TEXT,
+    mask_path     TEXT,
+    ink_ratio     REAL,
+    components    INTEGER,
+    aspect        REAL,
+    stroke_length INTEGER,
+    UNIQUE(student_index, sheet_id)
+);
 """
 
 # The sheet dates are printed on the sheets as DD.MM.YYYY, and that is what the
@@ -73,6 +85,10 @@ DATE_ORDER = (
     "substr(sheets.sheet_date, 4, 2), "
     "substr(sheets.sheet_date, 1, 2)"
 )
+
+SIGNATURE_FIELDS = ("crop_path", "mask_path", "ink_ratio", "components", "aspect", "stroke_length")
+"""Columns of ``signatures`` that :meth:`Database.save_signature` accepts."""
+
 
 class Database:
     """The attendance database, and every query the project runs against it."""
@@ -175,6 +191,34 @@ class Database:
             )
         log.debug("%d attendance rows written for sheet %d", len(rows), sheet_id)
 
+    def save_signature(self, student_index: str, sheet_id: int, **fields: object) -> None:
+        """Record where a signature crop was saved and what M6 measured in it.
+
+        Args:
+            student_index: Whose signature it is.
+            sheet_id: From :meth:`upsert_sheet`.
+            **fields: Any of :data:`SIGNATURE_FIELDS`. Anything else is a typo
+                on the caller's side and raises rather than being ignored.
+
+        Raises:
+            ValueError: If a field name is not a column of ``signatures``.
+        """
+        unknown = set(fields) - set(SIGNATURE_FIELDS)
+        if unknown:
+            raise ValueError(
+                f"unknown signature field(s) {sorted(unknown)}; "
+                f"expected any of {list(SIGNATURE_FIELDS)}"
+            )
+        columns = ["student_index", "sheet_id", *fields]
+        values = [student_index, sheet_id, *fields.values()]
+        placeholders = ", ".join("?" for _ in columns)
+        with self.connect() as connection:
+            connection.execute(
+                f"INSERT OR REPLACE INTO signatures ({', '.join(columns)}) "
+                f"VALUES ({placeholders})",
+                values,
+            )
+
     def get_attendance(self, student_index: str) -> list[dict]:
         """One student's record, oldest sheet first."""
         with self.connect() as connection:
@@ -185,6 +229,23 @@ class Database:
                 FROM attendance
                 JOIN sheets ON sheets.id = attendance.sheet_id
                 WHERE attendance.student_index = ?
+                ORDER BY {DATE_ORDER}
+                """,
+                (student_index,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_signatures(self, student_index: str) -> list[dict]:
+        """Every saved signature sample for one student, oldest sheet first."""
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT sheets.sheet_date, signatures.crop_path, signatures.mask_path,
+                       signatures.ink_ratio, signatures.components, signatures.aspect,
+                       signatures.stroke_length
+                FROM signatures
+                JOIN sheets ON sheets.id = signatures.sheet_id
+                WHERE signatures.student_index = ?
                 ORDER BY {DATE_ORDER}
                 """,
                 (student_index,),
