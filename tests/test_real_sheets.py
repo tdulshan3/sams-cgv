@@ -45,7 +45,8 @@ def _run(sheet: Path) -> dict:
     import sams
 
     stages = [make_stage() for make_stage in sams.STAGES]
-    return Pipeline(stages).run(SheetMeta(path=sheet, date=sheet.stem), [])
+    students = sams.load_students(config.INFO_XML)
+    return Pipeline(stages).run(SheetMeta(path=sheet, date=sheet.stem), students)
 
 
 @pytest.fixture(scope="module", params=SHEETS, ids=lambda p: p.stem)
@@ -116,6 +117,46 @@ def test_signature_cells_sit_in_the_rightmost_column(processed: dict) -> None:
     others = [grid.cell_bbox(0, col)[0] for col in range(grid.n_cols) if col != config.SIGNATURE_COL]
 
     assert signature_left > max(others)
+
+
+def test_ink_results_carry_every_feature_m7_needs(processed: dict) -> None:
+    """All seven features reach M7, not just the five that fit the old dataclass.
+
+    ``filled_ratio`` and ``centroid_offset`` were being computed by M6 and then
+    dropped at the ``InkResult`` boundary. They are the two that separate a
+    signature from ink that is not one — on ``21.06.2019`` the lecturer's
+    handwritten ``ab`` has a higher ink ratio than any real signature on any
+    sheet, so ink ratio alone cannot reject it.
+    """
+    ink = processed["ink"]
+    assert len(ink) == len(processed["cells"])
+
+    signed = [r for r in ink if r.ink_ratio > 0]
+    assert signed, "no cell on this sheet produced any ink at all"
+    for result in signed:
+        assert result.stroke_bbox is not None
+        assert result.aspect > 0
+        assert result.stroke_length > 0
+        assert result.filled_ratio > 0, "filled_ratio is being dropped again"
+
+
+def test_signature_crops_are_named_by_student_index(processed: dict) -> None:
+    """``outputs/cells/<date>/<index>.png`` — BUILD_SPEC.md section 5.4.
+
+    ``investigate.py`` counts a student's samples by globbing this exact name.
+    Named by row number instead, every student appears to have zero signatures
+    and M8's whole command is dead on arrival.
+    """
+    from src import cli
+
+    indices = {student.index for student in processed["students"]}
+    if not indices:
+        pytest.skip("no roll available, so crops cannot be named by index")
+
+    for index in indices:
+        assert cli.signature_samples(index), f"no saved crop found for {index}"
+
+    assert set(cli.known_indices()) == indices
 
 
 def test_binary_keeps_the_ink_is_white_convention(processed: dict) -> None:
