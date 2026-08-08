@@ -99,8 +99,21 @@ def _indices_from_cells() -> list[str]:
             for folder in config.CELLS.iterdir()
             if folder.is_dir()
             for crop in folder.glob("*.png")
+            if _looks_like_an_index(crop.stem)
         }
     )
+
+
+def _looks_like_an_index(stem: str) -> bool:
+    """Is this filename stem a student index rather than something else?
+
+    The folder also holds ``<index>_mask.png`` beside each crop, and falls back
+    to ``row_<n>.png`` when no roll was available to name the crops from. Left
+    unfiltered, both end up offered to the user as valid student indices —
+    ``unknown student index '001'. valid indices: row_0, row_0_mask, …`` — which
+    is worse than offering none.
+    """
+    return stem.isdigit()
 
 
 def known_indices() -> list[str]:
