@@ -55,7 +55,18 @@ def main(argv: list[str] | None = None) -> int:
     if investigate is None:
         return cli.not_ready(MATCHER_MODULE, MATCHER_OWNER)
 
-    index = cli.resolve_index(args.index)
+    # The brief requires that ``python investigate.py 001`` always works, even
+    # when "001" is not a real student index in info.xml. Use resolve_index
+    # only when the raw input already matches a known index; otherwise treat
+    # the raw input as a valid-but-uncropped index so the caller gets the
+    # helpful "0 samples — run sams.py first" message rather than an error.
+    raw = args.index.strip()
+    known = cli.known_indices()
+    if not known or raw in known:
+        index = cli.resolve_index(raw)
+    else:
+        index = raw
+        log.debug("index %r is not in the student list; treating as uncropped", index)
 
     samples = cli.signature_samples(index)
     if len(samples) < MIN_SAMPLES:
