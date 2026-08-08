@@ -80,6 +80,17 @@ def decide(result: InkResult) -> tuple[bool, float]:
         distance = (config.INK_RATIO_THRESHOLD - ink_ratio) / span if span > 0 else 1.0
 
     confidence = 0.5 + 0.5 * float(np.clip(distance, 0.0, 1.0))
+
+    # A signature is a thin stroke wandering through a wide box, so it fills
+    # only a fraction of its own bounding box. Ink that fills most of the box
+    # is something else — a written word, a smudge, or a neighbouring
+    # signature bleeding down through the row border. The verdict is left
+    # alone, because on this data the density does not decide it, but the
+    # confidence is capped so the cell lands in the summary's Uncertain count
+    # and gets looked at.
+    if present and float(result.filled_ratio) >= config.DENSE_FILL_RATIO:
+        confidence = min(confidence, config.DENSE_FILL_CONFIDENCE)
+
     return present, round(confidence, 3)
 
 

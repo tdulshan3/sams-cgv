@@ -318,6 +318,31 @@ PEN_HUE_RANGES = {
 
 # --- M7 decision ---
 
+DENSE_FILL_RATIO = 0.70
+"""Ink filling this much of its own bounding box stops being signature-shaped.
+
+A signature is a thin stroke crossing a wide box, so it fills a modest
+fraction of it — across the 25 genuine signatures the mean is 0.36. Ink that
+fills most of the box is a written word, a smudge, or a neighbour's signature
+bleeding through the row border.
+
+This lowers *confidence* only; it never changes a verdict. On the 30 labelled
+cells it flags 5 for review, and those 5 include the one cell the rule gets
+wrong (``05.07.2019 / 10009303``, a stray red tick sitting under an
+overflowing signature from the row above). The other four are correct verdicts
+that are simply worth a glance.
+
+Honest caveat for the report: there is exactly **one** misclassification in
+this data, so "catches every error" is a statement about n=1. The rule is
+justified by the shape argument above, not by that hit rate.
+"""
+
+DENSE_FILL_CONFIDENCE = 0.55
+"""Confidence ceiling for a dense cell.
+
+Below :data:`UNCERTAIN_BELOW`, so the summary counts the cell as uncertain and
+a human is pointed at it."""
+
 INK_RATIO_THRESHOLD = 0.036
 """Ink coverage a signature cell must reach before it counts as signed.
 

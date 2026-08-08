@@ -159,6 +159,38 @@ def test_signature_crops_are_named_by_student_index(processed: dict) -> None:
     assert set(cli.known_indices()) == indices
 
 
+def test_every_student_gets_exactly_one_record(processed: dict) -> None:
+    """Six students on the sheet, six attendance records, no duplicates."""
+    records = processed["records"]
+    assert len(records) == config.EXPECTED_DATA_ROWS
+
+    indices = [record.student_index for record in records]
+    assert len(set(indices)) == len(indices), "a student appears twice"
+    assert all(isinstance(i, str) and i.isdigit() for i in indices)
+
+    for record in records:
+        assert record.sheet_date == processed["sheet"].date
+        assert 0.0 <= record.confidence <= 1.0
+
+
+def test_a_dense_cell_is_never_reported_as_certain(processed: dict) -> None:
+    """Ink that fills its box is not signature-shaped, so do not claim certainty.
+
+    The one cell the decision rule gets wrong across all five sheets —
+    ``05.07.2019 / 10009303``, a stray red tick sitting under an overflowing
+    signature — used to be reported present at confidence 1.00, so it never
+    reached the summary's Uncertain count and nobody would have looked at it.
+    """
+    by_index = {r.cell.student_index: r for r in processed["ink"]}
+    for record in processed["records"]:
+        ink = by_index.get(record.student_index)
+        if ink is not None and ink.filled_ratio >= config.DENSE_FILL_RATIO:
+            assert record.confidence < config.UNCERTAIN_BELOW, (
+                f"{record.student_index} fills {ink.filled_ratio:.2f} of its box "
+                f"but is reported at confidence {record.confidence}"
+            )
+
+
 def test_binary_keeps_the_ink_is_white_convention(processed: dict) -> None:
     """Section 2: ink is 255, paper is 0, on every sheet."""
     binary = processed["binary"]
