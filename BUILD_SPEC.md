@@ -1662,7 +1662,19 @@ M1 skeleton + contracts + fixtures     ← everybody waits on this, and only thi
 Each has an owner and a deadline of *before that module is merged*.
 
 1. **Overflowing signatures — M5 and M6 agree the approach.** §4 deviation 6. A signature that spills into the row below belongs to the row it *starts* in. Proposal: M5 crops with a small vertical pad, M6 attributes each connected component to the row holding most of its pixels. Whoever writes it first tells the other.
-2. **Ink that is not a signature — M6 and M7 agree the split.** §4 deviation 7. `ab` and a stray tick are both ink and both mean absent. M6 supplies the features that separate them (`stroke_length`, `filled_ratio`, `aspect`, `components`); M7 owns the rule that uses them. If it cannot be made reliable across 30 cells, it is written up as a measured limitation with the exact failing cells named — that earns marks. Guessing does not.
+2. **Ink that is not a signature — M6 supplies, M7 decides. Measured, see below.** §4 deviation 7. `ab` and a stray tick are both ink and both mean absent. M6's features now all reach M7 on `InkResult`, and the separation has been measured across all 30 cells:
+
+   | | n | ink_ratio | filled_ratio | centroid_offset | aspect |
+   |---|---|---|---|---|---|
+   | genuine signatures | 25 | 0.207 | 0.362 | 48.6 | 4.47 |
+   | empty cells | 3 | 0.006 | 0.106 | 25.6 | 1.77 |
+   | **ink but absent** | 2 | **0.507** | **0.752** | 44.4 | 4.30 |
+
+   The two awkward cells are `21.06.2019 / 10009306` (the lecturer's `ab`, `filled_ratio` 0.740) and `05.07.2019 / 10009303` (a stray red tick, 0.765).
+
+   **No single feature separates them.** The best is `filled_ratio`, and rejecting above the lower awkward value still loses 2 of the 25 genuine signatures. `ink_ratio` loses 7 — the `ab` has a *higher* ink ratio than any real signature on any sheet.
+
+   One pair does separate cleanly: `filled_ratio >= 0.74 AND stroke_length >= 192` rejects both and keeps all 25. **Treat that as a measurement, not an answer.** It is fitted to two positive examples and its thresholds sit exactly on their values, so it is memorisation rather than a rule. M7 decides whether to use it with that caveat stated, or to report the two cells as a known limitation. Either is defensible in the report; presenting the pair as a validated rule is not.
 3. **The confidence band — M7 with M1.** `config.UNCERTAIN_BELOW` decides what the summary calls uncertain. M7 sets it from the threshold sweep, not by feel.
 
 ---
