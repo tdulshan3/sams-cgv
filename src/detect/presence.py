@@ -16,11 +16,15 @@ sitting on the threshold is as clear-cut as an empty one.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 
 from src import config
-from src.models import Cell, InkResult, Student
+from src.io.db import Database
+from src.models import AttendanceRecord, Cell, InkResult, SheetMeta, Student
 from src.utils.logging import get_logger
+from src.utils.stage import Stage
 
 log = get_logger("decision")
 
@@ -114,3 +118,185 @@ def map_rows_to_students(cells: list[Cell], students: list[Student]) -> dict[int
         mapping[row] = student.index
         student.row = row
     return mapping
+
+
+def _rename_to_index(path_text: str | None, student_index: str) -> str | None:
+    """Rename one of M6's ``row_<n>`` crops to ``<index>``, and say where it is.
+
+    M6 saves each crop as ``outputs/cells/<date>/row_<n>.png`` because at that
+    point in the pipeline nothing knows the student's index — the mapping is
+    this module's job. But ``investigate.py`` finds a student's samples by
+    globbing ``outputs/cells/<date>/<index>.png`` (spec §7, and the hand-off
+    table in §14), so somebody has to bridge the two, and the first place with
+    both facts in hand is here.
+
+    Args:
+        path_text: Where M6 wrote the file, or ``None``.
+        student_index: Who the row turned out to belong to.
+
+    Returns:
+        The path the file now lives at, or ``None`` if there was no file.
+    """
+    if not path_text:
+        return None
+    source = Path(path_text)
+    if not source.is_file():
+        return path_text
+    suffix = "_mask" if source.stem.endswith("_mask") else ""
+    target = source.with_name(f"{student_index}{suffix}{source.suffix}")
+    if target != source:
+        source.replace(target)
+    return str(target)
+
+
+class DecisionStage(Stage):
+    """M7 — decide present or absent, then persist the whole sheet."""
+
+    name = "decision"
+
+    def __init__(self, db: Database | None = None) -> None:
+        """
+        Args:
+            db: Where to write. Tests pass a temporary database; the pipeline
+                passes nothing and gets ``data/attendance.db``.
+        """
+        self.db = db or Database()
+        self._figures: dict[str, np.ndarray] = {}
+
+    def run(self, ctx: dict) -> dict:
+        """Turn M6's measurements into attendance records, and store them."""
+        ink: list[InkResult] = ctx.get("ink") or []
+        students: list[Student] = ctx.get("students") or []
+        sheet: SheetMeta | None = ctx.get("sheet")
+
+        if not ink:
+            log.warning("no ink results to decide on — no attendance recorded")
+            ctx["records"] = []
+            return ctx
+        if not students:
+            log.warning("no students read from info.xml — no attendance recorded")
+            ctx["records"] = []
+            return ctx
+
+        sheet_date = sheet.date if sheet else "unknown"
+        mapping = map_rows_to_students([result.cell for result in ink], students)
+
+        records: list[AttendanceRecord] = []
+        signatures: list[tuple[str, dict]] = []
+        for result in ink:
+            student_index = mapping.get(result.cell.row)
+            if student_index is None:
+                continue
+            result.cell.student_index = student_index
+
+            present, confidence = decide(result)
+            records.append(
+                AttendanceRecord(
+                    student_index=student_index,
+                    sheet_date=sheet_date,
+                    present=present,
+                    confidence=confidence,
+                    ink_ratio=float(result.ink_ratio),
+                )
+            )
+            log.debug(
+                "row %d -> %s: ink=%.4f components=%d stroke=%d -> %s (%.2f)",
+                result.cell.row,
+                student_index,
+                result.ink_ratio,
+                result.components,
+                result.stroke_length,
+                "present" if present else "absent",
+                confidence,
+            )
+
+            result.crop_path = _rename_to_index(result.crop_path, student_index)
+            result.mask_path = _rename_to_index(result.mask_path, student_index)
+            signatures.append(
+                (
+                    student_index,
+                    {
+                        "crop_path": result.crop_path,
+                        "mask_path": result.mask_path,
+                        "ink_ratio": float(result.ink_ratio),
+                        "components": int(result.components),
+                        "aspect": float(result.aspect),
+                        "stroke_length": int(result.stroke_length),
+                    },
+                )
+            )
+
+        ctx["records"] = records
+        if sheet is not None:
+            self._persist(sheet, students, records, signatures, ctx)
+        self._figures = {"decision": _verdict_strip(ink, records)}
+
+        present = sum(1 for record in records if record.present)
+        log.info(
+            "%d records: %d present, %d absent (%d uncertain)",
+            len(records),
+            present,
+            len(records) - present,
+            sum(1 for record in records if record.confidence < config.UNCERTAIN_BELOW),
+        )
+        return ctx
+
+    def _persist(
+        self,
+        sheet: SheetMeta,
+        students: list[Student],
+        records: list[AttendanceRecord],
+        signatures: list[tuple[str, dict]],
+        ctx: dict,
+    ) -> None:
+        """Write students, the sheet, every verdict and every signature crop.
+
+        Students go in before attendance because attendance holds a foreign key
+        to them, and a signature row without an attendance row would be a
+        signature belonging to nobody.
+        """
+        subject_code = ctx.get("subject_code") or sheet.subject_code
+        self.db.init_schema()
+        self.db.upsert_students(students)
+        sheet_id = self.db.upsert_sheet(sheet, subject_code=subject_code)
+        self.db.save_attendance(records, sheet_id)
+        for student_index, fields in signatures:
+            self.db.save_signature(student_index, sheet_id, **fields)
+        log.info("sheet %s stored as id %d in %s", sheet.date, sheet_id, self.db.path)
+
+    def figures(self) -> dict[str, np.ndarray]:
+        """One strip of every signature cell, framed green for present, red for absent."""
+        return {name: image for name, image in self._figures.items() if image is not None}
+
+
+def _verdict_strip(ink: list[InkResult], records: list[AttendanceRecord]) -> np.ndarray | None:
+    """Stack the signature cells into one image, each framed by its verdict.
+
+    Cheap to build and the fastest way to check a run by eye: six crops, six
+    coloured frames, and any disagreement with the sheet is obvious at a
+    glance.
+    """
+    verdicts = {record.student_index: record.present for record in records}
+    tiles: list[np.ndarray] = []
+    width = max(
+        (result.cell.image.shape[1] for result in ink if result.cell.image is not None),
+        default=0,
+    )
+    if width == 0:
+        return None
+
+    for result in ink:
+        image = result.cell.image
+        if image is None or image.size == 0:
+            continue
+        tile = np.zeros((image.shape[0], width, 3), dtype=np.uint8)
+        tile[:, : image.shape[1]] = image[:, :width]
+        present = verdicts.get(result.cell.student_index or "", False)
+        colour = (0, 170, 0) if present else (0, 0, 200)  # BGR
+        tile[:3, :] = colour
+        tile[-3:, :] = colour
+        tile[:, :3] = colour
+        tile[:, -3:] = colour
+        tiles.append(tile)
+
+    return np.vstack(tiles) if tiles else None
