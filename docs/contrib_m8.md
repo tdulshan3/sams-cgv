@@ -63,24 +63,3 @@ That gives the module a tight behavioral fence around the comparison path withou
 ## Notes for the next step
 
 When real crops are present under `outputs/cells/`, rerun `tools/eval_recognition.py` to refresh the EER measurement and the feature-separation chart against the real data rather than the placeholder branch state in this workspace.
-# M8 — Signature Recognition
-
-Individual contribution notes. Two pages minimum, per the coursework brief:
-what you built, the techniques you used and why, the problems you hit, and
-the figures in `outputs/` that back it up.
-
-## What I built
-
-_TBD_
-
-## Techniques and libraries
-
-_TBD_
-
-## Problems and how I solved them
-
-_TBD_
-
-## Evidence
-
-_TBD_
