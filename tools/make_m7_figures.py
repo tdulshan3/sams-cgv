@@ -30,6 +30,7 @@ import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 
+import matplotlib.colors  # noqa: E402
 import matplotlib.patches as patches  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
