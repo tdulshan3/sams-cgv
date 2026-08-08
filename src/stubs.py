@@ -72,9 +72,35 @@ class DecisionStub(_Stub):
 def parse_students(xml_path: Path) -> list:
     """Stand-in for ``src.io.xml_parser.parse_students``.
 
-    The real parser returns ``list[Student]`` read from ``info.xml``. Until it
-    exists this returns an empty list, so ``sams.py`` reports zero students
-    rather than inventing any.
+    Reads the index and name of every ``<student>`` and nothing else. M7's real
+    parser also returns the subject metadata, validates the document and gives
+    clear errors on a malformed one — none of which is here.
+
+    It reads the file rather than returning an empty list because the roll is
+    what names the saved signature crops. With no students, M6 falls back to
+    ``row_<n>.png``, and ``investigate.py`` — which counts a student's samples
+    by looking for ``<index>.png`` — reports that everyone has none. Ten lines
+    of ``ElementTree`` keeps the rest of the pipeline honest until M7 lands.
+
+    ``.//student`` rather than a fixed path, so it survives the batch element
+    changing shape. See BUILD_SPEC.md section 4, deviation 4.
     """
-    log.warning("STUB xml_parser: returning no students (owned by M7)")
-    return []
+    log.warning("STUB xml_parser: minimal read of %s (owned by M7)", xml_path.name)
+
+    from xml.etree import ElementTree
+
+    from src.models import Student
+
+    try:
+        root = ElementTree.parse(xml_path).getroot()
+    except (OSError, ElementTree.ParseError) as error:
+        log.warning("could not read %s: %s", xml_path, error)
+        return []
+
+    students = []
+    for node in root.findall(".//student"):
+        index = (node.findtext("index") or "").strip()
+        name = (node.findtext("name") or "").strip()
+        if index:
+            students.append(Student(index=index, name=name))
+    return students
