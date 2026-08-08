@@ -2,7 +2,7 @@
 
 ## What I built
 
-M8 is the signature-recognition layer that compares crops from `outputs/cells/<sheet_date>/<index>.png` and decides whether a student's signature is consistent across sheets. The implementation lives in `src/recognise/preprocess_sig.py`, `src/recognise/features.py`, `src/recognise/matcher.py`, and `tools/eval_recognition.py`, with the tunable recognition settings in the M8 block of `src/config.py`.
+M8 is the signature-recognition layer that compares crops from `outputs/cells/<sheet_date>/<index>.png` and decides whether a student's signature is consistent across sheets. The implementation lives in `src/recognise/preprocess_sig.py`, `src/recognise/features.py`, `src/recognise/matcher.py`, and `tools/make_m8_figures.py`, with the tunable recognition settings in the M8 block of `src/config.py`.
 
 The pipeline is split into three stages:
 
@@ -10,7 +10,7 @@ The pipeline is split into three stages:
 2. `features.py` extracts five complementary similarity signals: SSIM, HOG, Hu moments, ORB matches, and a custom hand-built similarity score.
 3. `matcher.py` combines those features into one weighted score, prints pairwise tables for `investigate.py`, detects the least similar sheet for one student, and saves the per-student figures.
 
-`tools/eval_recognition.py` builds the genuine and impostor pair sets, sweeps the combined-score threshold, measures FAR/FRR and EER, reports the best-separating feature, and writes the recognition figures under `outputs/figures/`.
+`tools/make_m8_figures.py` builds the genuine and impostor pair sets, sweeps the combined-score threshold, measures FAR/FRR and EER, reports the best-separating feature, and writes the recognition figures under `outputs/figures/`.
 
 ## What the code does
 
@@ -62,4 +62,4 @@ That gives the module a tight behavioral fence around the comparison path withou
 
 ## Notes for the next step
 
-When real crops are present under `outputs/cells/`, rerun `tools/eval_recognition.py` to refresh the EER measurement and the feature-separation chart against the real data rather than the placeholder branch state in this workspace.
+When real crops are present under `outputs/cells/`, rerun `tools/make_m8_figures.py` to refresh the EER measurement and the feature-separation chart against the real data rather than the placeholder branch state in this workspace.
