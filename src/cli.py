@@ -118,11 +118,10 @@ def known_indices() -> list[str]:
             return indices
 
     parse_students = optional_import("src.io.xml_parser", "parse_students")
-    if parse_students is None:
-        from src.stubs import parse_students  # STUB — owned by M7
-    indices = sorted({student.index for student in parse_students(config.INFO_XML)})
-    if indices:
-        return indices
+    if parse_students is not None:
+        indices = sorted({student.index for student in parse_students(config.INFO_XML)})
+        if indices:
+            return indices
 
     return _indices_from_cells()
 

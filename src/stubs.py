@@ -53,28 +53,3 @@ class _Stub(Stage):
         if image is None:
             log.warning("fixture %s could not be decoded by OpenCV", path)
         return image
-
-
-# STUB — owned by M7, delete when their module lands
-class DecisionStub(_Stub):
-    """Stands in for the present or absent decision and the database write."""
-
-    name = "decision"
-    owner = "M7"
-
-    def run(self, ctx: dict) -> dict:
-        self.announce()
-        ctx["records"] = []
-        return ctx
-
-
-# STUB — owned by M7, delete when their module lands
-def parse_students(xml_path: Path) -> list:
-    """Stand-in for ``src.io.xml_parser.parse_students``.
-
-    The real parser returns ``list[Student]`` read from ``info.xml``. Until it
-    exists this returns an empty list, so ``sams.py`` reports zero students
-    rather than inventing any.
-    """
-    log.warning("STUB xml_parser: returning no students (owned by M7)")
-    return []

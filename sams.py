@@ -18,8 +18,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src import config, stubs
+from src import config
 from src.detect.ink_mask import InkStage
+from src.detect.presence import DecisionStage
 from src.models import AttendanceRecord, SheetMeta, Student
 from src.pipeline import Pipeline
 from src.preprocess.binarize import BinarizeStage
@@ -44,7 +45,7 @@ STAGES: list[Callable[[], Stage]] = [
     BinarizeStage,        # M4 — real, merged in #10
     TableStage,           # M5 — real, merged in #11
     InkStage,             # M6 — real, src.detect.ink_mask
-    stubs.DecisionStub,   # M7 — src.detect.presence
+    DecisionStage,        # M7 — real, src.detect.presence
 ]
 
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
@@ -124,15 +125,8 @@ class RunSummary:
 
 
 def load_students(xml_path: Path) -> list[Student]:
-    """Read the roll from ``info.xml``.
-
-    Prefers M7's real parser and falls back to the stub while it is unwritten,
-    so this file needs no edit on the day their module lands.
-    """
-    try:
-        from src.io.xml_parser import parse_students  # type: ignore[attr-defined]
-    except ImportError:
-        parse_students = stubs.parse_students
+    """Read the roll from ``info.xml``."""
+    from src.io.xml_parser import parse_students
 
     students = parse_students(xml_path)
     log.info("%d students read from %s", len(students), xml_path.name)
