@@ -318,6 +318,29 @@ PEN_HUE_RANGES = {
 
 # --- M7 decision ---
 
+INK_RATIO_THRESHOLD = 0.012
+"""Ink coverage a signature cell must reach before it counts as signed.
+
+Provisional until the T5 sweep against ``data/ground_truth.csv`` replaces it
+with a measured value. Set from that curve, never by eye."""
+
+MIN_COMPONENTS = 1
+"""Connected components a signature must have. Zero means the cell is blank."""
+
+MIN_STROKE_LENGTH = 25
+"""Skeleton pixels a signature must have — how far the pen actually travelled.
+
+Guards the case ink ratio alone cannot: a short thick mark can cover as many
+pixels as a thin sprawling signature, so coverage on its own would accept it."""
+
+CONF_LOW, CONF_HIGH = 0.008, 0.030
+"""Ink ratios treated as confidently blank and confidently signed.
+
+Between them the verdict is a judgement call, and ``decide`` scales confidence
+down towards 0.5 as a cell approaches :data:`INK_RATIO_THRESHOLD` from either
+side. Anything under :data:`UNCERTAIN_BELOW` is then reported as uncertain in
+the summary, so a human knows which cells are worth a second look."""
+
 # --- M8 recognition ---
 
 # --- M9 visualisation ---
