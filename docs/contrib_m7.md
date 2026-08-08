@@ -101,7 +101,7 @@ whole reason the rule is not one number:
   near-zero ink. It reads 0.274, because M6's ink mask marks a large region of
   blank paper as ink; opening the crop and its mask side by side makes this
   obvious. No threshold on any feature M6 supplies separates it from a genuine
-  signature — its stroke length (192) and fill ratio (0.77) both sit inside the
+  signature — its stroke length (192) and fill ratio (0.76) both sit inside the
   present distribution. **This failure is in the ink mask, not in the decision
   rule, and no decision rule can fix it.** I raised it with M6 rather than
   fitting a rule around one bad measurement.
