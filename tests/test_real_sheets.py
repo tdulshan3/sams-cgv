@@ -45,7 +45,7 @@ def _run(sheet: Path) -> dict:
     import sams
 
     stages = [make_stage() for make_stage in sams.STAGES]
-    students = sams.load_students(config.INFO_XML)
+    students, _subject = sams.load_students(config.INFO_XML)
     return Pipeline(stages).run(SheetMeta(path=sheet, date=sheet.stem), students)
 
 

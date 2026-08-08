@@ -318,6 +318,49 @@ PEN_HUE_RANGES = {
 
 # --- M7 decision ---
 
+INK_RATIO_THRESHOLD = 0.036
+"""Ink coverage a signature cell must reach before it counts as signed.
+
+Measured, not chosen — ``python tools/tune_threshold.py`` sweeps this against
+the 30 hand-labelled cells in ``data/ground_truth.csv``. The sweep has no peak,
+it has a plateau: every value between the highest genuinely-blank cell (0.0173,
+05.07.2019 / 10009301) and the lowest real signature (0.0546, 12.07.2019 /
+10009302) scores identically, because no cell lies between them. This is the
+midpoint of that plateau — the value furthest from being wrong about any cell
+we have actually seen."""
+
+MAX_INK_RATIO = 0.55
+"""Ink coverage above which a cell holds something that is not a signature.
+
+The one rule here fitted to a single example, so it is flagged rather than
+buried. On 21.06.2019 the lecturer marked 10009306 absent by ruling a line
+across the box and writing ``ab`` on it, which covers 74% of the cell — where
+the largest genuine signature in the data covers 37%. A signature is strokes
+on paper, not a filled box, so an upper bound is the right *shape* of rule; but
+with one supporting cell the honest claim is that it catches this convention on
+this data, not that 0.55 is a law. ``tools/tune_threshold.py`` reports accuracy
+with and without it."""
+
+MIN_COMPONENTS = 1
+"""Connected components a signature must have. Zero means the cell is blank."""
+
+MIN_STROKE_LENGTH = 100
+"""Skeleton pixels a signature must have — how far the pen actually travelled.
+
+Guards the case ink ratio alone cannot: a short thick mark can cover as many
+pixels as a thin sprawling signature, so coverage on its own would accept it.
+Measured the same way as the ink threshold — every genuine signature in the 30
+cells has a skeleton of at least 132 pixels, the faint marks on 05.07.2019 /
+10009301 reach 60, and 100 sits between them."""
+
+CONF_LOW, CONF_HIGH = 0.008, 0.030
+"""Ink ratios treated as confidently blank and confidently signed.
+
+Between them the verdict is a judgement call, and ``decide`` scales confidence
+down towards 0.5 as a cell approaches :data:`INK_RATIO_THRESHOLD` from either
+side. Anything under :data:`UNCERTAIN_BELOW` is then reported as uncertain in
+the summary, so a human knows which cells are worth a second look."""
+
 # --- M8 recognition ---
 
 # --- M9 visualisation ---

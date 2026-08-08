@@ -18,8 +18,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src import config, stubs
+from src import config
 from src.detect.ink_mask import InkStage
+from src.detect.presence import DecisionStage
 from src.models import AttendanceRecord, SheetMeta, Student
 from src.pipeline import Pipeline
 from src.preprocess.binarize import BinarizeStage
@@ -44,13 +45,13 @@ STAGES: list[Callable[[], Stage]] = [
     BinarizeStage,        # M4 — real, merged in #10
     TableStage,           # M5 — real, merged in #11
     InkStage,             # M6 — real, src.detect.ink_mask
-    stubs.DecisionStub,   # M7 — src.detect.presence
+    DecisionStage,        # M7 — real, src.detect.presence
 ]
 
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
 
-Swapping a stub for the real module is one line here and one deletion in
-``src/stubs.py``. Nothing else in the project changes, which is the whole point
+Every stage is a real module now. Getting here cost one line of change in
+this list per module and nothing else in the project, which is the whole point
 of every stage being a :class:`~src.utils.stage.Stage`.
 """
 
@@ -123,20 +124,20 @@ class RunSummary:
         return "\n".join(lines)
 
 
-def load_students(xml_path: Path) -> list[Student]:
-    """Read the roll from ``info.xml``.
+def load_students(xml_path: Path) -> tuple[list[Student], str]:
+    """Read the roll and the subject code from ``info.xml``.
 
-    Prefers M7's real parser and falls back to the stub while it is unwritten,
-    so this file needs no edit on the day their module lands.
+    Returns:
+        The students in sheet row order, and the subject code. The code is
+        carried on :class:`~src.models.SheetMeta` so the decision stage can
+        store it against the sheet — read the roll alone and every row in the
+        ``sheets`` table ends up with an empty ``subject_code``.
     """
-    try:
-        from src.io.xml_parser import parse_students  # type: ignore[attr-defined]
-    except ImportError:
-        parse_students = stubs.parse_students
+    from src.io.xml_parser import parse_info
 
-    students = parse_students(xml_path)
+    students, meta = parse_info(xml_path)
     log.info("%d students read from %s", len(students), xml_path.name)
-    return students
+    return students, meta.get("subject_code", "")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -209,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     sheet_date = args.image.stem
     log.info("sheet date %s from filename %s", sheet_date, args.image.name)
 
-    sheet = SheetMeta(path=args.image, date=sheet_date)
-    students = load_students(args.xml)
+    students, subject_code = load_students(args.xml)
+    sheet = SheetMeta(path=args.image, date=sheet_date, subject_code=subject_code)
 
     viewer = ProgressViewer(
         sheet_date=sheet_date,
