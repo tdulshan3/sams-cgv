@@ -124,13 +124,20 @@ class RunSummary:
         return "\n".join(lines)
 
 
-def load_students(xml_path: Path) -> list[Student]:
-    """Read the roll from ``info.xml``."""
-    from src.io.xml_parser import parse_students
+def load_students(xml_path: Path) -> tuple[list[Student], str]:
+    """Read the roll and the subject code from ``info.xml``.
 
-    students = parse_students(xml_path)
+    Returns:
+        The students in sheet row order, and the subject code. The code is
+        carried on :class:`~src.models.SheetMeta` so the decision stage can
+        store it against the sheet — read the roll alone and every row in the
+        ``sheets`` table ends up with an empty ``subject_code``.
+    """
+    from src.io.xml_parser import parse_info
+
+    students, meta = parse_info(xml_path)
     log.info("%d students read from %s", len(students), xml_path.name)
-    return students
+    return students, meta.get("subject_code", "")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -203,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     sheet_date = args.image.stem
     log.info("sheet date %s from filename %s", sheet_date, args.image.name)
 
-    sheet = SheetMeta(path=args.image, date=sheet_date)
-    students = load_students(args.xml)
+    students, subject_code = load_students(args.xml)
+    sheet = SheetMeta(path=args.image, date=sheet_date, subject_code=subject_code)
 
     viewer = ProgressViewer(
         sheet_date=sheet_date,
