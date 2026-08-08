@@ -93,13 +93,21 @@ SIGNATURE_FIELDS = ("crop_path", "mask_path", "ink_ratio", "components", "aspect
 class Database:
     """The attendance database, and every query the project runs against it."""
 
-    def __init__(self, path: Path = config.DB_PATH) -> None:
+    def __init__(self, path: Path | str | None = None) -> None:
         """
         Args:
             path: Where the SQLite file lives. Tests pass a temporary path;
-                everything else takes the default.
+                everything else passes nothing and gets
+                :data:`src.config.DB_PATH`.
+
+        The default is resolved here rather than in the signature on purpose. A
+        default argument is evaluated once, when the module is imported, so
+        ``path: Path = config.DB_PATH`` would freeze whatever the path was at
+        import time and quietly ignore any later change to it — a test that
+        redirects the database to a temporary file would still write to the
+        real ``data/attendance.db``.
         """
-        self.path = Path(path)
+        self.path = Path(path) if path is not None else config.DB_PATH
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -286,10 +294,20 @@ def known_indices() -> list[str]:
     """
     if not config.DB_PATH.is_file():
         return []
-    with Database().connect() as connection:
-        rows = connection.execute(
-            "SELECT DISTINCT student_index FROM attendance ORDER BY student_index"
-        ).fetchall()
+    try:
+        with Database().connect() as connection:
+            rows = connection.execute(
+                "SELECT DISTINCT student_index FROM attendance ORDER BY student_index"
+            ).fetchall()
+    except sqlite3.DatabaseError as error:
+        # A file exists but is not a database we can read: a half-written run,
+        # a schema from an older version, or something that is not SQLite at
+        # all. To the caller that is the same situation as no database yet —
+        # and the CLIs turn it into "run sams.py first", which is the useful
+        # thing to say. Letting it escape would put a traceback in front of a
+        # user who has done nothing wrong.
+        log.warning("cannot read %s (%s) — treating it as empty", config.DB_PATH, error)
+        return []
     return [str(row["student_index"]) for row in rows]
 
 

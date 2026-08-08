@@ -16,6 +16,7 @@ matplotlib.use("Agg")
 
 import pytest
 
+from src import config
 from src.io.db import Database
 from src.io.xml_parser import parse_info, parse_students
 from src.models import AttendanceRecord, SheetMeta, Student
@@ -159,22 +160,60 @@ def test_foreign_keys_are_enforced(db):
         db.save_attendance([AttendanceRecord("99999999", "12.07.2019", True, 0.9, 0.2)], sheet_id)
 
 
-def test_known_indices_and_is_empty_reflect_the_data(db):
-    """The two helpers the CLIs call to give a helpful error."""
+def test_known_indices_and_is_empty_reflect_the_data(tmp_path, monkeypatch):
+    """The two module-level helpers ``infovis.py`` and ``investigate.py`` call.
+
+    Pointed at a temporary database rather than the real one, which also pins
+    down that ``Database()`` reads ``config.DB_PATH`` when it is constructed.
+    Bound as a default argument instead, it would freeze the path at import
+    time, this test would write to ``data/attendance.db``, and the helpers
+    would answer about the wrong file.
+    """
     from src.io import db as db_module
 
-    assert db_module.known_indices.__module__ == "src.io.db"
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "attendance.db")
+    assert db_module.known_indices() == []
+    assert db_module.is_empty() is True
 
-    db.upsert_students(STUDENTS)
-    sheet_id = db.upsert_sheet(sheet())
-    db.save_attendance(records(), sheet_id)
+    database = Database()
+    assert database.path == tmp_path / "attendance.db"
+    database.init_schema()
+    database.upsert_students(STUDENTS)
+    sheet_id = database.upsert_sheet(sheet())
+    database.save_attendance(records(), sheet_id)
 
-    with db.connect() as connection:
-        indices = [
-            row["student_index"]
-            for row in connection.execute("SELECT DISTINCT student_index FROM attendance")
-        ]
-    assert sorted(indices) == ["10000409", "10009301"]
+    assert db_module.known_indices() == ["10000409", "10009301"]
+    assert db_module.is_empty() is False
+
+
+def test_an_unreadable_database_reads_as_empty(tmp_path, monkeypatch):
+    """A corrupt or half-written file must not put a traceback in front of a user.
+
+    ``infovis.py`` asks ``is_empty()`` before it draws anything. If the file on
+    disk is not a database it can read, the useful answer is "there is nothing
+    here yet, run sams.py" — section 10 of the spec allows no traceback for a
+    situation the user did not cause.
+    """
+    from src.io import db as db_module
+
+    broken = tmp_path / "attendance.db"
+    broken.write_text("this is not a database", encoding="utf-8")
+    monkeypatch.setattr(config, "DB_PATH", broken)
+
+    assert db_module.known_indices() == []
+    assert db_module.is_empty() is True
+
+
+def test_a_database_without_the_schema_reads_as_empty(tmp_path, monkeypatch):
+    """A file that is valid SQLite but has no tables yet is also just 'empty'."""
+    from src.io import db as db_module
+
+    path = tmp_path / "attendance.db"
+    sqlite3.connect(path).close()
+    monkeypatch.setattr(config, "DB_PATH", path)
+
+    assert db_module.known_indices() == []
+    assert db_module.is_empty() is True
 
 
 def test_parse_students_keeps_indices_as_strings(tmp_path):
