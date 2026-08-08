@@ -12,7 +12,51 @@ import numpy as np
 from src import config
 from src.detect.cell_clean import remove_table_lines
 from src.models import Cell, InkResult, SheetMeta
+from src.utils.logging import get_logger
 from src.utils.stage import Stage
+
+log = get_logger("ink")
+
+
+def _attach_student_indices(cells: list[Cell], students: list) -> None:
+    """Give each cell the index of the student on that sheet row.
+
+    Positional: sheet row *n* is XML student *n*. T0 confirmed the two orders
+    match, because ``info.xml`` was transcribed from the sheets in row order.
+    This exists only so the saved crops can be named by index; M7's
+    ``map_rows_to_students`` is the authoritative mapping and, once it lands,
+    every cell already carries an index and this is a no-op.
+
+    Does nothing when the roll is empty or shorter than the sheet, rather than
+    guessing — a wrong index on a signature crop is worse than no index.
+    """
+    if not students:
+        return
+    if len(students) < len(cells):
+        log.warning(
+            "%d students in info.xml but %d rows on the sheet; crops for the "
+            "extra rows keep row-number names",
+            len(students),
+            len(cells),
+        )
+    for cell in cells:
+        if cell.student_index is None and cell.row < len(students):
+            cell.student_index = students[cell.row].index
+
+
+def _clear_previous_crops(sheet_date: str) -> None:
+    """Empty this sheet's crop folder before writing a fresh set.
+
+    ``outputs/cells/<date>/`` is never cleaned between runs, so crops from an
+    earlier run survive alongside the new ones. That is not cosmetic: M8 reads
+    this folder to collect a student's signatures, and a crop left behind under
+    an old name is a sample of something that no longer exists.
+    """
+    folder = config.CELLS / sheet_date
+    if not folder.is_dir():
+        return
+    for stale in folder.glob("*.png"):
+        stale.unlink()
 
 
 class InkStage(Stage):
@@ -36,6 +80,16 @@ class InkStage(Stage):
         sheet: SheetMeta | None = ctx.get("sheet")
         sheet_date = sheet.date if sheet else "unknown"
 
+        # Name saved crops by student index, not row number. BUILD_SPEC.md
+        # section 5.4 fixes the path as outputs/cells/<date>/<index>.png, and
+        # that is what investigate.py globs to count a student's samples and
+        # what M8 looks up. A Cell does not carry its index — M7 attaches it —
+        # so until their parser lands ctx["students"] is empty and the crops
+        # fall back to row numbers. This lights up on its own the day M7
+        # merges; M7's own mapping is authoritative and supersedes it.
+        _attach_student_indices(cells, ctx.get("students") or [])
+        _clear_previous_crops(sheet_date)
+
         ink_results: list[InkResult] = []
         tiles: list[np.ndarray] = []
 
@@ -55,7 +109,9 @@ class InkStage(Stage):
             feats = ink_features(mask)
 
             # 4. Save cell crop and mask to disk for M8
-            crop_path, mask_path = save_cell_outputs(sheet_date, cell.row, cleaned_bgr, mask)
+            crop_path, mask_path = save_cell_outputs(
+                sheet_date, cell.student_index or f"row_{cell.row}", cleaned_bgr, mask
+            )
 
             # 5. Build InkResult
             res = InkResult(
@@ -66,6 +122,8 @@ class InkStage(Stage):
                 stroke_bbox=feats["stroke_bbox"],
                 aspect=feats["aspect"],
                 stroke_length=feats["stroke_length"],
+                filled_ratio=feats["filled_ratio"],
+                centroid_offset=feats["centroid_offset"],
                 crop_path=crop_path,
                 mask_path=mask_path,
             )
@@ -448,17 +506,19 @@ def ink_features(mask: np.ndarray) -> dict:
 
 def save_cell_outputs(
     sheet_date: str,
-    row: int,
+    stem: str,
     cell_bgr: np.ndarray,
     mask: np.ndarray,
 ) -> tuple[str, str]:
     """Save cell crop image and ink mask to disk for signature recognition (M8).
 
-    Writes to outputs/cells/<sheet_date>/row_<row>.png and row_<row>_mask.png.
+    Writes ``outputs/cells/<sheet_date>/<stem>.png`` and ``<stem>_mask.png``,
+    the paths fixed by BUILD_SPEC.md section 5.4.
 
     Args:
         sheet_date: Date stem string (e.g. '12.07.2019').
-        row: Row index integer (0-based).
+        stem: Student index, e.g. ``"10000409"``. Falls back to ``row_<n>``
+            while M7's parser is unwritten and no index is available.
         cell_bgr: BGR crop of the cell.
         mask: uint8 binary ink mask.
 
@@ -468,8 +528,8 @@ def save_cell_outputs(
     out_dir = config.CELLS / sheet_date
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    crop_file = out_dir / f"row_{row}.png"
-    mask_file = out_dir / f"row_{row}_mask.png"
+    crop_file = out_dir / f"{stem}.png"
+    mask_file = out_dir / f"{stem}_mask.png"
 
     if cell_bgr is not None and cell_bgr.size > 0:
         cv2.imwrite(str(crop_file), cell_bgr)

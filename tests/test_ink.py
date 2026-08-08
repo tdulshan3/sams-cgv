@@ -308,13 +308,18 @@ def test_save_cell_outputs(tmp_path, monkeypatch):
     cell_bgr = np.full((30, 60, 3), 200, dtype=np.uint8)
     mask = np.full((30, 60), 255, dtype=np.uint8)
 
-    crop_path_str, mask_path_str = save_cell_outputs("12.07.2019", 0, cell_bgr, mask)
+    crop_path_str, mask_path_str = save_cell_outputs(
+        "12.07.2019", "10000409", cell_bgr, mask
+    )
 
     assert Path(crop_path_str).is_file()
     assert Path(mask_path_str).is_file()
     assert "12.07.2019" in crop_path_str
-    assert "row_0.png" in crop_path_str
-    assert "row_0_mask.png" in mask_path_str
+    # BUILD_SPEC.md section 5.4 fixes this path as <index>.png. investigate.py
+    # counts a student's samples by globbing for it, so a row-numbered name
+    # means every student appears to have no signatures at all.
+    assert crop_path_str.endswith("10000409.png")
+    assert mask_path_str.endswith("10000409_mask.png")
 
 
 def test_ink_stage():

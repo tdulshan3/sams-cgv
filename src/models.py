@@ -103,6 +103,24 @@ class InkResult:
     stroke_length: int = 0
     """Pixels in the skeletonised stroke — how much pen travelled, not how thick."""
 
+    filled_ratio: float = 0.0
+    """Ink pixels divided by :attr:`stroke_bbox` area, in ``[0, 1]``.
+
+    How solidly the ink fills its own bounding box. A signature is sparse — a
+    thin line wandering through a wide box — while a written word, a smudge or
+    a tick is dense. On ``21.06.2019`` the lecturer's handwritten ``ab`` has a
+    *higher* ink ratio than any real signature on any sheet, so ink ratio alone
+    cannot reject it. This is one of the two features that can.
+    """
+
+    centroid_offset: float = 0.0
+    """Distance from the ink's centre of mass to the cell centre, normalised.
+
+    A signature is written across the box. A stray tick sits wherever the pen
+    happened to touch. Together with :attr:`filled_ratio` this is what M7 needs
+    to separate ink that means *present* from ink that does not.
+    """
+
     crop_path: str | None = None
     """Where the BGR crop was written, under ``outputs/cells/``."""
 

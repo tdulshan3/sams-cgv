@@ -45,7 +45,8 @@ def _run(sheet: Path) -> dict:
     import sams
 
     stages = [make_stage() for make_stage in sams.STAGES]
-    return Pipeline(stages).run(SheetMeta(path=sheet, date=sheet.stem), [])
+    students, _subject = sams.load_students(config.INFO_XML)
+    return Pipeline(stages).run(SheetMeta(path=sheet, date=sheet.stem), students)
 
 
 @pytest.fixture(scope="module", params=SHEETS, ids=lambda p: p.stem)
@@ -116,6 +117,78 @@ def test_signature_cells_sit_in_the_rightmost_column(processed: dict) -> None:
     others = [grid.cell_bbox(0, col)[0] for col in range(grid.n_cols) if col != config.SIGNATURE_COL]
 
     assert signature_left > max(others)
+
+
+def test_ink_results_carry_every_feature_m7_needs(processed: dict) -> None:
+    """All seven features reach M7, not just the five that fit the old dataclass.
+
+    ``filled_ratio`` and ``centroid_offset`` were being computed by M6 and then
+    dropped at the ``InkResult`` boundary. They are the two that separate a
+    signature from ink that is not one — on ``21.06.2019`` the lecturer's
+    handwritten ``ab`` has a higher ink ratio than any real signature on any
+    sheet, so ink ratio alone cannot reject it.
+    """
+    ink = processed["ink"]
+    assert len(ink) == len(processed["cells"])
+
+    signed = [r for r in ink if r.ink_ratio > 0]
+    assert signed, "no cell on this sheet produced any ink at all"
+    for result in signed:
+        assert result.stroke_bbox is not None
+        assert result.aspect > 0
+        assert result.stroke_length > 0
+        assert result.filled_ratio > 0, "filled_ratio is being dropped again"
+
+
+def test_signature_crops_are_named_by_student_index(processed: dict) -> None:
+    """``outputs/cells/<date>/<index>.png`` — BUILD_SPEC.md section 5.4.
+
+    ``investigate.py`` counts a student's samples by globbing this exact name.
+    Named by row number instead, every student appears to have zero signatures
+    and M8's whole command is dead on arrival.
+    """
+    from src import cli
+
+    indices = {student.index for student in processed["students"]}
+    if not indices:
+        pytest.skip("no roll available, so crops cannot be named by index")
+
+    for index in indices:
+        assert cli.signature_samples(index), f"no saved crop found for {index}"
+
+    assert set(cli.known_indices()) == indices
+
+
+def test_every_student_gets_exactly_one_record(processed: dict) -> None:
+    """Six students on the sheet, six attendance records, no duplicates."""
+    records = processed["records"]
+    assert len(records) == config.EXPECTED_DATA_ROWS
+
+    indices = [record.student_index for record in records]
+    assert len(set(indices)) == len(indices), "a student appears twice"
+    assert all(isinstance(i, str) and i.isdigit() for i in indices)
+
+    for record in records:
+        assert record.sheet_date == processed["sheet"].date
+        assert 0.0 <= record.confidence <= 1.0
+
+
+def test_a_dense_cell_is_never_reported_as_certain(processed: dict) -> None:
+    """Ink that fills its box is not signature-shaped, so do not claim certainty.
+
+    The one cell the decision rule gets wrong across all five sheets —
+    ``05.07.2019 / 10009303``, a stray red tick sitting under an overflowing
+    signature — used to be reported present at confidence 1.00, so it never
+    reached the summary's Uncertain count and nobody would have looked at it.
+    """
+    by_index = {r.cell.student_index: r for r in processed["ink"]}
+    for record in processed["records"]:
+        ink = by_index.get(record.student_index)
+        if ink is not None and ink.filled_ratio >= config.DENSE_FILL_RATIO:
+            assert record.confidence < config.UNCERTAIN_BELOW, (
+                f"{record.student_index} fills {ink.filled_ratio:.2f} of its box "
+                f"but is reported at confidence {record.confidence}"
+            )
 
 
 def test_binary_keeps_the_ink_is_white_convention(processed: dict) -> None:
