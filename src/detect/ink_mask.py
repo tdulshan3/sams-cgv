@@ -44,6 +44,21 @@ def _attach_student_indices(cells: list[Cell], students: list) -> None:
             cell.student_index = students[cell.row].index
 
 
+def _clear_previous_crops(sheet_date: str) -> None:
+    """Empty this sheet's crop folder before writing a fresh set.
+
+    ``outputs/cells/<date>/`` is never cleaned between runs, so crops from an
+    earlier run survive alongside the new ones. That is not cosmetic: M8 reads
+    this folder to collect a student's signatures, and a crop left behind under
+    an old name is a sample of something that no longer exists.
+    """
+    folder = config.CELLS / sheet_date
+    if not folder.is_dir():
+        return
+    for stale in folder.glob("*.png"):
+        stale.unlink()
+
+
 class InkStage(Stage):
     """M6 — Cell Cleaning & Ink Segmentation Stage.
 
@@ -73,6 +88,7 @@ class InkStage(Stage):
         # fall back to row numbers. This lights up on its own the day M7
         # merges; M7's own mapping is authoritative and supersedes it.
         _attach_student_indices(cells, ctx.get("students") or [])
+        _clear_previous_crops(sheet_date)
 
         ink_results: list[InkResult] = []
         tiles: list[np.ndarray] = []
