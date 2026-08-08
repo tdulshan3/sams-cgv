@@ -329,6 +329,18 @@ it has a plateau: every value between the highest genuinely-blank cell (0.0173,
 midpoint of that plateau — the value furthest from being wrong about any cell
 we have actually seen."""
 
+MAX_INK_RATIO = 0.55
+"""Ink coverage above which a cell holds something that is not a signature.
+
+The one rule here fitted to a single example, so it is flagged rather than
+buried. On 21.06.2019 the lecturer marked 10009306 absent by ruling a line
+across the box and writing ``ab`` on it, which covers 74% of the cell — where
+the largest genuine signature in the data covers 37%. A signature is strokes
+on paper, not a filled box, so an upper bound is the right *shape* of rule; but
+with one supporting cell the honest claim is that it catches this convention on
+this data, not that 0.55 is a law. ``tools/tune_threshold.py`` reports accuracy
+with and without it."""
+
 MIN_COMPONENTS = 1
 """Connected components a signature must have. Zero means the cell is blank."""
 
