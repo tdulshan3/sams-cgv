@@ -412,7 +412,7 @@ SCORE_WEIGHTS = {"ssim": 0.30, "hog": 0.30, "hu": 0.10, "orb": 0.15, "custom": 0
 feature separates genuine from impostor pairs best.
 """
 
-MATCH_THRESHOLD = 0.62
+MATCH_THRESHOLD = 0.402
 """Combined score above this is a match. Set from the EER experiment in T5 —
 never guessed.
 """
