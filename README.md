@@ -16,19 +16,38 @@ three commands, and those are the whole interface.
 
 ## What state this is in
 
-The pipeline, the three programs, the step-by-step viewer, and the shared
-contracts (M1) are finished. The Acquisition & Geometry Correction stage (M2) 
-is also completed and integrated. The remaining six image processing modules 
-are owned by other members of the group and are still standing in as placeholders, 
-so every command runs end to end today but reports zero students. Each placeholder
-announces itself:
+**Complete.** All nine modules are merged and wired in, every placeholder has
+been deleted, and the three commands run end to end on all five sheets.
 
-```
-[22:37:22] WARNING stubs     | STUB binarize: returning placeholder data (owned by M4)
-```
+| | Module | Owner |
+|---|---|---|
+| M1 | Lead, contracts, pipeline, three CLIs, step viewer | Dulshan |
+| M2 | Acquisition & geometry | Jayaweera |
+| M3 | Greyscale & enhancement | Kulasooriya |
+| M4 | Binarisation & morphology | Dilina |
+| M5 | Table detection | dushaDev |
+| M6 | Ink segmentation | Laksika |
+| M7 | Decision & database | Malinda |
+| M8 | Signature recognition | Kalhara |
+| M9 | Visualisation & QA | Pethiyagoda |
 
-As each module lands it replaces one line of the `STAGES` list in `sams.py` and
-one class in `src/stubs.py`. Nothing else changes.
+Measured against `data/ground_truth.csv`, which was transcribed by eye from the
+five sheets:
+
+**Attendance accuracy: 29 of 30 cells, 96.7%.**
+
+| Sheet | Accuracy |
+|---|---|
+| 31.05.2019 | 6/6 |
+| 21.06.2019 | 6/6 |
+| 28.06.2019 | 6/6 |
+| 12.07.2019 | 6/6 |
+| 05.07.2019 | 5/6 |
+
+The single miss is `05.07.2019 / 10009303`, where a stray red tick sits under a
+signature overflowing from the row above. The system reports it at confidence
+0.55, below the uncertainty threshold, so it appears in the summary's
+`Uncertain` count rather than being asserted as fact.
 
 ---
 
@@ -76,8 +95,8 @@ numbered step images, and prints a summary:
  Present   : 6
  Absent    : 0
  Uncertain : 0
- Duration  : 0.19 s
- Steps     : outputs/steps/12.07.2019/  (4 images)
+ Duration  : 0.57 s
+ Steps     : outputs/steps/12.07.2019/  (17 images)
 ─────────────────────────────────────────────────────────────
 ```
 
@@ -114,15 +133,14 @@ src/
   models.py       Student, SheetMeta, Cell, InkResult, AttendanceRecord
   pipeline.py     runs the stages in order, times them, names the one that failed
   cli.py          shared helpers for the three programs
-  stubs.py        placeholder stages, deleted as each real module lands
-  utils/          Stage base class, logging, timing
+  utils/          Stage base class, logging, timing, opencv 5 wrappers
   io/             image loading, info.xml parsing, the database
   preprocess/     geometry, enhancement, binarisation
   table/          line detection, grid building, cell extraction
   detect/         ink segmentation and the present or absent decision
   recognise/      signature comparison
   viz/            the step viewer and the charts
-tools/            input inspection, bootstrap fixtures, report figures
+tools/            input inspection, report figures, QA runner, threshold sweeps
 tests/            pytest suite
 data/
   sheets/         the five signing sheet photos, named by the date on the sheet
@@ -159,15 +177,30 @@ pytest -q
 
 ## Known limits
 
-* Six of the image processing modules are placeholders, so attendance counts are
-  zero until they land.
-* `info.xml` was not supplied with the sheet photos. It is reconstructed from
-  Figure 1 of the brief and the printed student table. The brief's own example
-  is not well-formed XML — a tag may not start with a digit — so the batch is
-  carried as an attribute instead.
-* Signatures routinely run past their cell borders, and on two sheets a cell
-  holds ink that is not a signature: a handwritten `ab` on `21.06.2019` and a
-  stray red mark on `05.07.2019`. Both mean absent. Ink ratio alone gets them
-  wrong, and handling them is an open question in `BUILD_SPEC.md` section 14.
+Stated plainly, because a measured limitation is worth more than a claim that
+does not survive checking.
+
+* **Signature matching barely works.** `investigate.py` runs, but the
+  genuine-against-impostor experiment (`python tools/eval_recognition.py`)
+  measures an **Equal Error Rate of 43%** across 60 genuine and 375 impostor
+  pairs — close to the 50% of a coin toss. `MATCH_THRESHOLD` is set from that
+  measurement rather than guessed, so the tool is at least internally honest,
+  but it cannot reliably tell one student's signature from another's. The most
+  likely causes are the sample size (5 per student, no known forgeries) and
+  contamination: crops are ~225 x 43 px and neighbouring signatures bleed
+  across the row borders into them.
+* **Geometry never uses the perspective warp.** All five sheets are
+  photographed on a pale desk, so the paper edge has too little contrast for
+  contour detection and every sheet takes the rotation fallback instead. The
+  result is straight, but it is not a true top-down correction.
+* **One attendance cell in thirty is wrong** — see above. It is flagged
+  uncertain rather than asserted.
+* **`info.xml` was not supplied** with the sheet photos. It is reconstructed
+  from Figure 1 of the brief and the printed student table. The brief's own
+  example is not well-formed XML — a tag may not start with a digit — so the
+  batch is carried as an attribute instead.
+* **Ink is not always a signature.** A handwritten `ab` on `21.06.2019` and a
+  stray red mark on `05.07.2019` both mean absent. The decision stage rejects
+  the first on stroke shape and gets the second wrong.
 * Step images are downscaled to 1400 px wide before being written. The full
   size photos are 3024 x 4032 and nothing in the report is printed that large.
