@@ -429,6 +429,9 @@ until T8, and only switched on if it measurably helps.
 
 # --- M9 visualisation ---
 
+CHART_DPI = 150
+CHART_STYLE = "seaborn-v0_8-whitegrid"
+CHART_FIGSIZE = (11, 7)
 
 def ensure_dirs() -> None:
     """Create every output folder. Safe to call on every run."""
