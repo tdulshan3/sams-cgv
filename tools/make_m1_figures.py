@@ -213,7 +213,8 @@ def main(argv: list[str] | None = None) -> int:
 
     viewer = ProgressViewer(sheet.date, show=False, save=True)
     pipeline = Pipeline([make_stage() for make_stage in STAGES], viewer=viewer)
-    pipeline.run(sheet, load_students(config.INFO_XML))
+    students, _subject = load_students(config.INFO_XML)
+    pipeline.run(sheet, students)
     viewer.save_all()
     viewer.save_montage(config.FIGURES / f"m1_montage_{sheet.date}.png")
 
