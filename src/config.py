@@ -390,6 +390,9 @@ the summary, so a human knows which cells are worth a second look."""
 
 # --- M9 visualisation ---
 
+CHART_DPI = 150
+CHART_STYLE = "seaborn-v0_8-whitegrid"
+CHART_FIGSIZE = (11, 7)
 
 def ensure_dirs() -> None:
     """Create every output folder. Safe to call on every run."""
