@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Generate M7's five report figures.
 
-    python tools/tune_threshold.py        # first — caches the measurements
-    python tools/make_m7_figures.py       # then — draws them
+    python tools/tune_threshold.py        # first, caches the measurements
+    python tools/make_m7_figures.py       # then, draws them
 
 Everything here is drawn from ``outputs/decision_features.csv``, the cache one
 pipeline pass over all five sheets leaves behind, so the figures in the report
 and the threshold in ``config.py`` cannot disagree with each other: they are
 the same thirty measurements.
 
-    m7_ink_ratio_distribution.png   the main figure — where present and absent
+    m7_ink_ratio_distribution.png   the main figure, where present and absent
                                     actually sit, and where the threshold falls
     m7_threshold_sweep.png          accuracy at every threshold, ink alone
                                     against the full rule
@@ -49,7 +49,7 @@ from tools.tune_threshold import (  # noqa: E402
 
 log = get_logger("m7_figures")
 
-# Categorical slots 1 and 2 of the house palette — blue and orange, the pair
+# Categorical slots 1 and 2 of the house palette, blue and orange, the pair
 # that stays separable under every common form of colour blindness. Present and
 # absent are identities, not magnitudes, so they take categorical hues; the
 # confusion matrix shades counts and so takes a single-hue sequential ramp.
@@ -138,7 +138,7 @@ def figure_distribution(samples: list[CellSample]) -> None:
         color=MUTED,
     )
     top.set_ylabel("cells")
-    top.set_title("Ink coverage separates signed from unsigned — except where the mask is wrong")
+    top.set_title("Ink coverage separates signed from unsigned; except where the mask is wrong")
     top.legend(loc="upper right")
 
     rng = np.random.default_rng(402)
@@ -169,7 +169,7 @@ def figure_distribution(samples: list[CellSample]) -> None:
 
     bottom.set_yticks([0.6, 1.0], ["not signed", "signed"], fontsize=8)
     bottom.set_ylim(0.25, 1.25)
-    bottom.set_xlabel("ink ratio — ink pixels ÷ cell pixels")
+    bottom.set_xlabel("ink ratio, ink pixels ÷ cell pixels")
     bottom.grid(axis="y", visible=False)
     _save(fig, "m7_ink_ratio_distribution.png")
 
@@ -246,7 +246,7 @@ def figure_confusion(samples: list[CellSample]) -> None:
         ax.grid(visible=False)
         ax.tick_params(length=0)
 
-    fig.suptitle("Every error is a false present — nobody who signed is ever called absent", y=1.10)
+    fig.suptitle("Every error is a false present; nobody who signed is ever called absent", y=1.10)
     _save(fig, "m7_confusion_matrix.png")
 
 
@@ -292,7 +292,7 @@ def figure_per_sheet(samples: list[CellSample]) -> None:
             )
     ax.set_ylabel("cells correct (%)")
     ax.set_ylim(0, 112)
-    ax.set_title("Accuracy per sheet — 6 cells each")
+    ax.set_title("Accuracy per sheet, 6 cells each")
     ax.grid(axis="x", visible=False)
     _save(fig, "m7_accuracy_per_sheet.png")
 
@@ -401,7 +401,7 @@ def figure_er_diagram() -> None:
     arrow("signatures", "sheets", "sheet_id", 0.22, 0.30)
 
     ax.set_title(
-        "data/attendance.db — one row per student per sheet, unique on the pair",
+        "data/attendance.db; one row per student per sheet, unique on the pair",
         fontsize=11,
         color=INK,
     )

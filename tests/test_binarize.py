@@ -36,8 +36,8 @@ METHODS = ["global", "otsu", "adaptive", "sauvola"]
 
 
 def _two_peak_image() -> np.ndarray:
-    """A clean synthetic image with two well-separated intensity peaks —
-    dark 'ink' pixels around 40, bright 'paper' pixels around 200 — so the
+    """A clean synthetic image with two well-separated intensity peaks,
+    dark 'ink' pixels around 40, bright 'paper' pixels around 200, so the
     correct threshold is unambiguous and OpenCV's own Otsu is a fair judge."""
     rng = np.random.default_rng(0)
     paper = rng.normal(200, 8, (100, 100))
@@ -58,7 +58,7 @@ def _stroke_on_paper() -> np.ndarray:
 
 @pytest.mark.parametrize("method", METHODS)
 def test_output_is_strictly_two_valued(method):
-    """Every method returns an image containing only 0 and 255 — the
+    """Every method returns an image containing only 0 and 255, the
     contract M5, M6 and M7 all read."""
     out = apply_threshold(_stroke_on_paper(), method)
     assert out.dtype == np.uint8
@@ -117,7 +117,7 @@ def test_sauvola_ink_coverage_stays_sane_on_a_mostly_blank_page():
 
     Inferred from a float array's dtype limits it becomes 1.0 instead of
     ~128, the local threshold lands near 1000 on 0-255 data, and every
-    pixel falls below it — a blank page comes out 97% ink. A signing sheet
+    pixel falls below it; a blank page comes out 97% ink. A signing sheet
     is a few percent ink, so anything near total coverage is the bug back.
     """
     page = np.full((200, 200), 230, dtype=np.uint8)
@@ -163,7 +163,7 @@ def test_closing_fills_a_one_pixel_gap_in_a_stroke():
 
 
 def test_only_a_rectangular_kernel_bridges_a_gap_in_a_hairline():
-    """At size 3, OpenCV's ellipse kernel is identical to a cross — it has
+    """At size 3, OpenCV's ellipse kernel is identical to a cross; it has
     no diagonal support. Closing a *one pixel thick* line with it therefore
     cannot bridge a gap: the dilation fills it, but the erosion immediately
     reopens it because the pixel above and below the gap were never set.
@@ -247,7 +247,7 @@ def test_even_sauvola_window_raises_value_error():
 
 
 def test_unknown_method_names_raise_value_error():
-    """No method selector silently falls through to a default — a typo in
+    """No method selector silently falls through to a default; a typo in
     config.py should stop the run, not quietly change the algorithm."""
     grey = np.zeros((30, 30), dtype=np.uint8)
 

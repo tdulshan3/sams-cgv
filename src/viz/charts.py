@@ -1,4 +1,4 @@
-"""M9 Visualisation & QA — Attendance charts.
+"""M9 Visualisation & QA, Attendance charts.
 
 Provides the visualisations for individual student records and class-wide
 summaries, drawn using Matplotlib and Seaborn.

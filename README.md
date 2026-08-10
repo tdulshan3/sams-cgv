@@ -1,6 +1,6 @@
-# SAMS — Student Attendance Management System
+# SAMS: Student Attendance Management System
 
-CS402.3 Computer Graphics and Visualization — NSBM Green University.
+CS402.3 Computer Graphics and Visualization, NSBM Green University.
 
 A university records attendance on paper signing sheets. An admin photographs a
 sheet with a phone and hands over the picture plus a student list. SAMS reads
@@ -9,7 +9,7 @@ empty, stores that as attendance in a local SQLite database, and draws graphs
 of it. It also compares one student's signatures across sheets and flags one
 that does not look like the others.
 
-Command line only. There is no web page and no desktop app — the brief fixes
+Command line only. There is no web page and no desktop app; the brief fixes
 three commands, and those are the whole interface.
 
 ---
@@ -54,7 +54,7 @@ signature overflowing from the row above. The system reports it at confidence
 ## Install
 
 Python 3.11 or newer. On Arch based systems do not install into the system
-Python — it is externally managed.
+Python: it is externally managed.
 
 ```fish
 python -m venv .venv
@@ -76,10 +76,10 @@ python investigate.py 10000409
 
 The brief illustrates these with `10.07.2019.png` and index `001`. Our five
 sheets are dated `31.05.2019`, `21.06.2019`, `28.06.2019`, `05.07.2019` and
-`12.07.2019`, and the real student indices are eight digits — see section 4 of
+`12.07.2019`, and the real student indices are eight digits, see section 4 of
 `BUILD_SPEC.md`.
 
-### `sams.py` — process one sheet
+### `sams.py`, process one sheet
 
 ```
 usage: sams.py [-h] [--no-show] [--no-save] [--debug] image xml
@@ -103,7 +103,7 @@ numbered step images, and prints a summary:
 `--no-show` skips the montage window, `--no-save` skips writing step images,
 `--debug` turns on verbose logging.
 
-### `infovis.py` — attendance charts
+### `infovis.py`, attendance charts
 
 ```
 usage: infovis.py [-h] [--all] [--save-only] [--debug] [index]
@@ -112,7 +112,7 @@ usage: infovis.py [-h] [--all] [--save-only] [--debug] [index]
 One student, or `--all` for the class. `--save-only` writes to
 `outputs/charts/` without opening a window.
 
-### `investigate.py` — compare signatures
+### `investigate.py`, compare signatures
 
 ```
 usage: investigate.py [-h] [--save-only] [--debug] index
@@ -183,7 +183,7 @@ does not survive checking.
 * **Signature matching barely works.** `investigate.py` runs, but the
   genuine-against-impostor experiment (`python tools/eval_recognition.py`)
   measures an **Equal Error Rate of 43%** across 60 genuine and 375 impostor
-  pairs — close to the 50% of a coin toss. `MATCH_THRESHOLD` is set from that
+  pairs: close to the 50% of a coin toss. `MATCH_THRESHOLD` is set from that
   measurement rather than guessed, so the tool is at least internally honest,
   but it cannot reliably tell one student's signature from another's. The most
   likely causes are the sample size (5 per student, no known forgeries) and
@@ -193,11 +193,11 @@ does not survive checking.
   photographed on a pale desk, so the paper edge has too little contrast for
   contour detection and every sheet takes the rotation fallback instead. The
   result is straight, but it is not a true top-down correction.
-* **One attendance cell in thirty is wrong** — see above. It is flagged
+* **One attendance cell in thirty is wrong**, see above. It is flagged
   uncertain rather than asserted.
 * **`info.xml` was not supplied** with the sheet photos. It is reconstructed
   from Figure 1 of the brief and the printed student table. The brief's own
-  example is not well-formed XML — a tag may not start with a digit — so the
+  example is not well-formed XML, a tag may not start with a digit, so the
   batch is carried as an attribute instead.
 * **Ink is not always a signature.** A handwritten `ab` on `21.06.2019` and a
   stray red mark on `05.07.2019` both mean absent. The decision stage rejects

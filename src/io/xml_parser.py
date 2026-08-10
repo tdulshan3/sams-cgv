@@ -1,4 +1,4 @@
-"""Reading ``info.xml`` — the roll, and who the subject belongs to.
+"""Reading ``info.xml``, the roll, and who the subject belongs to.
 
 The coursework brief shows this file in its Figure 1 as
 ``<info><students><student>``, with the batch written as ``<15>``. Neither is
@@ -10,7 +10,7 @@ deviation 4.
 
 That history is the reason this module never walks a fixed path. It searches
 with ``.//student`` and ``.//subject``, so the batch element can change shape
-again — or gain another level of nesting — without breaking the parse. The one
+again: or gain another level of nesting, without breaking the parse. The one
 thing it does insist on is that each student carries an ``index`` and a
 ``name``; a roll with a nameless student in it is a broken input, not something
 to paper over.
@@ -80,7 +80,7 @@ def parse_info(path: str | Path = config.INFO_XML) -> tuple[list[Student], dict]
 
     Returns:
         ``(students, meta)``. ``students`` is in document order, which is sheet
-        row order — the XML was transcribed off the sheets row by row, so
+        row order: the XML was transcribed off the sheets row by row, so
         student *n* is row *n*. ``meta`` holds ``subject_code``,
         ``subject_name``, ``degree`` and ``lecturer``, each ``""`` if the file
         does not carry it.
@@ -106,7 +106,7 @@ def parse_info(path: str | Path = config.INFO_XML) -> tuple[list[Student], dict]
         name = _text(element, "name")
         if not index:
             raise ValueError(
-                f"{path}: student {position + 1} has no <index> — "
+                f"{path}: student {position + 1} has no <index>; "
                 "every student needs one, it is how attendance is keyed"
             )
         if not name:
@@ -116,7 +116,7 @@ def parse_info(path: str | Path = config.INFO_XML) -> tuple[list[Student], dict]
     if not students:
         raise ValueError(
             f"{path}: no <student> elements found. Expected them under "
-            "nsbm/students/batches/batch/ — see BUILD_SPEC.md section 4."
+            "nsbm/students/batches/batch/, see BUILD_SPEC.md section 4."
         )
 
     log.info(

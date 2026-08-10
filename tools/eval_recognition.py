@@ -11,7 +11,7 @@ Two score distributions, a cut-off where they separate, and real numbers for
 False Accept Rate, False Reject Rate and the Equal Error Rate where the two
 cross. That turns "we picked 0.62" into an experiment.
 
-Usage::
+Usage:
 
     python tools/eval_recognition.py            # measure and report
     python tools/eval_recognition.py --apply    # also write the EER threshold
@@ -57,7 +57,7 @@ def collect_samples() -> dict[str, list[tuple[str, Path]]]:
     for folder in sorted(config.CELLS.iterdir()):
         if not folder.is_dir():
             continue
-        # The matcher compares ink masks, not the colour crops — normalisation
+        # The matcher compares ink masks, not the colour crops, normalisation
         # and every feature downstream expect a binary stroke image.
         for mask in sorted(folder.glob("*_mask.png")):
             index = mask.stem.removesuffix("_mask")
@@ -99,9 +99,9 @@ def score_pairs(samples: dict[str, list[tuple[str, Path]]]) -> tuple[list[dict],
 def far_frr(genuine: list[float], impostor: list[float], thresholds: np.ndarray):
     """False accept and false reject rate at each threshold.
 
-    FAR is the share of impostor pairs scoring at or above the threshold — the
+    FAR is the share of impostor pairs scoring at or above the threshold; the
     forgeries we would wave through. FRR is the share of genuine pairs scoring
-    below it — the real signatures we would wrongly flag.
+    below it: the real signatures we would wrongly flag.
     """
     genuine_scores = np.asarray(genuine)
     impostor_scores = np.asarray(impostor)
@@ -136,7 +136,7 @@ def plot_distributions(genuine: list[float], impostor: list[float], threshold: f
                  label=f"threshold from EER = {threshold:.3f}")
     axis.set_xlabel("combined similarity score")
     axis.set_ylabel("pairs")
-    axis.set_title("M8 — genuine against impostor signature scores")
+    axis.set_title("M8, genuine against impostor signature scores")
     axis.legend(fontsize=9)
     axis.spines[["top", "right"]].set_visible(False)
     figure.tight_layout()
@@ -147,14 +147,14 @@ def plot_distributions(genuine: list[float], impostor: list[float], threshold: f
 
 def plot_far_frr(thresholds, far, frr, eer_threshold, eer) -> None:
     figure, axis = plt.subplots(figsize=(9, 5.5), dpi=config.FIGURE_DPI)
-    axis.plot(thresholds, far * 100, label="FAR — impostors accepted", color="#C62828")
-    axis.plot(thresholds, frr * 100, label="FRR — genuine rejected", color="#2E7D32")
+    axis.plot(thresholds, far * 100, label="FAR, impostors accepted", color="#C62828")
+    axis.plot(thresholds, frr * 100, label="FRR, genuine rejected", color="#2E7D32")
     axis.axvline(eer_threshold, color="black", linestyle="--", linewidth=1.4)
     axis.plot([eer_threshold], [eer * 100], "ko", markersize=7,
               label=f"EER = {eer:.1%} at {eer_threshold:.3f}")
     axis.set_xlabel("threshold")
     axis.set_ylabel("rate (%)")
-    axis.set_title("M8 — error rates against threshold")
+    axis.set_title("M8, error rates against threshold")
     axis.legend(fontsize=9)
     axis.spines[["top", "right"]].set_visible(False)
     figure.tight_layout()
@@ -170,7 +170,7 @@ def plot_feature_comparison(rankings: list[tuple[str, float]]) -> None:
     axis.barh(names, values, color="#e8eef7", edgecolor="#2b4c7e")
     axis.invert_yaxis()
     axis.set_xlabel("separation (d-prime, higher is better)")
-    axis.set_title("M8 — which feature tells genuine from impostor best")
+    axis.set_title("M8, which feature tells genuine from impostor best")
     axis.spines[["top", "right"]].set_visible(False)
     for y, value in enumerate(values):
         axis.text(value + max(values) * 0.02, y, f"{value:.2f}", va="center", fontsize=9)

@@ -32,7 +32,7 @@ def load_image(path: str | Path) -> np.ndarray:
     try:
         # Note: none of our 5 real signing-sheet photos carry an EXIF orientation
         # tag (confirmed in BUILD_SPEC.md section 4 / T0), so this code path is
-        # a no-op on our actual data — it's here for correctness with other
+        # a no-op on our actual data, it's here for correctness with other
         # phones/photos, not because our fixtures need it. Don't let its absence
         # look like a bug when you test on the real sheets.
         pil_img = Image.open(resolved_path)

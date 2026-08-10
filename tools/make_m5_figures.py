@@ -71,7 +71,7 @@ def line_masks(ctx: dict) -> None:
     _panel(axes[0], binary, "binary (ink = 255)")
     _panel(axes[1], line_mask(binary, "horizontal"), "horizontal mask\nwide kernel keeps row rules")
     _panel(axes[2], line_mask(binary, "vertical"), "vertical mask\ntall kernel keeps column rules")
-    figure.suptitle("M5 — isolating table lines by morphology", fontsize=12)
+    figure.suptitle("M5, isolating table lines by morphology", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_line_masks.png")
 
@@ -88,7 +88,7 @@ def projection_profiles(ctx: dict) -> None:
     figure, axes = plt.subplots(2, 1, figsize=(11, 7), dpi=config.FIGURE_DPI)
     axes[0].plot(h_profile, linewidth=0.9)
     axes[0].plot(grid.ys, h_profile[grid.ys], "rv", markersize=7, label="detected rows")
-    axes[0].set_title("horizontal projection profile — peaks are row rules", fontsize=10)
+    axes[0].set_title("horizontal projection profile; peaks are row rules", fontsize=10)
     axes[0].set_xlabel("y (pixels)")
     axes[0].set_ylabel("ink pixels in row")
     axes[0].legend(fontsize=8)
@@ -102,7 +102,7 @@ def projection_profiles(ctx: dict) -> None:
 
     for axis in axes:
         axis.spines[["top", "right"]].set_visible(False)
-    figure.suptitle("M5 — line positions from projection profiles", fontsize=12)
+    figure.suptitle("M5, line positions from projection profiles", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_projection_profiles.png")
 
@@ -110,7 +110,7 @@ def projection_profiles(ctx: dict) -> None:
 def grid_overlay(ctx: dict, table: TableStage) -> None:
     figure, axis = plt.subplots(figsize=(7, 9), dpi=config.FIGURE_DPI)
     _panel(axis, table._grid_overlay, "green = columns, red = rows")
-    figure.suptitle("M5 — detected grid over the corrected sheet", fontsize=12)
+    figure.suptitle("M5, detected grid over the corrected sheet", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_grid_overlay.png")
 
@@ -134,7 +134,7 @@ def two_tables(ctx: dict) -> None:
         "orange = discarded, including the lecture header table\n"
         "taking the wrong one reports the lecturer's signature as a student's",
     )
-    figure.suptitle("M5 — there are two tables on the page", fontsize=12)
+    figure.suptitle("M5; there are two tables on the page", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_two_tables.png")
 
@@ -150,7 +150,7 @@ def cells_numbered(ctx: dict) -> None:
         )
     figure, axis = plt.subplots(figsize=(7, 9), dpi=config.FIGURE_DPI)
     _panel(axis, warped, f"{len(ctx['cells'])} signature cells, column {config.SIGNATURE_COL}")
-    figure.suptitle("M5 — the extracted signature cells", fontsize=12)
+    figure.suptitle("M5; the extracted signature cells", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_cells_numbered.png")
 
@@ -174,7 +174,7 @@ def grid_repair(ctx: dict) -> None:
     axis.spines[["top", "right", "left"]].set_visible(False)
     gaps = np.diff(kept) if len(kept) > 1 else np.array([0])
     figure.suptitle(
-        f"M5 — selecting the table by spacing regularity (kept gaps: {gaps.min()}-{gaps.max()} px)",
+        f"M5, selecting the table by spacing regularity (kept gaps: {gaps.min()}-{gaps.max()} px)",
         fontsize=11,
     )
     figure.tight_layout()
@@ -201,7 +201,7 @@ def hough_vs_morphology(ctx: dict) -> None:
     figure, axes = plt.subplots(1, 2, figsize=(10, 7), dpi=config.FIGURE_DPI)
     _panel(axes[0], morph, f"morphology (primary)\n{len(grid.ys)} rows, {len(grid.xs)} columns")
     _panel(axes[1], hough, f"HoughLinesP (cross-check)\n{len(hough_ys)} rows, {len(hough_xs)} columns")
-    figure.suptitle("M5 — why morphology beats Hough on printed tables", fontsize=12)
+    figure.suptitle("M5, why morphology beats Hough on printed tables", fontsize=12)
     figure.tight_layout()
     _save(figure, "m5_hough_vs_morphology.png")
 

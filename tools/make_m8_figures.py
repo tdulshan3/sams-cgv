@@ -4,7 +4,7 @@ Follows the same convention as ``make_m6_figures.py`` and
 ``make_m7_figures.py``: run from the repository root, write the figures,
 print a summary.
 
-Usage::
+Usage:
 
     python tools/make_m8_figures.py
     python tools/make_m8_figures.py --show   # open figures after saving
@@ -390,7 +390,7 @@ def main() -> None:
             print(f"  {name}")
     else:
         print(
-            "No crops found under outputs/cells/ — placeholder figures written.\n"
+            "No crops found under outputs/cells/, placeholder figures written.\n"
             "Run  python sams.py <sheet> data/info.xml  first to generate crops."
         )
 

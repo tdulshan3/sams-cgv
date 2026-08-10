@@ -2,15 +2,15 @@
 
 Everything the pipeline decides ends up here, and everything M8 and M9 draw
 comes back out of here. One SQLite file, ``data/attendance.db``, no server to
-install and nothing to configure — the whole database is a file the marker can
+install and nothing to configure; the whole database is a file the marker can
 copy.
 
 Four tables, defined once in :data:`SCHEMA`:
 
-* ``students``   — the roll, read from ``info.xml``
-* ``sheets``     — one row per signing sheet photo processed
-* ``attendance`` — one row per student per sheet: the verdict
-* ``signatures`` — where each signature crop was saved, plus M6's measurements,
+* ``students``, the roll, read from ``info.xml``
+* ``sheets``, one row per signing sheet photo processed
+* ``attendance``, one row per student per sheet: the verdict
+* ``signatures``, where each signature crop was saved, plus M6's measurements,
   so ``investigate.py`` can find a student's samples without re-running the
   pipeline
 
@@ -103,7 +103,7 @@ class Database:
         The default is resolved here rather than in the signature on purpose. A
         default argument is evaluated once, when the module is imported, so
         ``path: Path = config.DB_PATH`` would freeze whatever the path was at
-        import time and quietly ignore any later change to it — a test that
+        import time and quietly ignore any later change to it; a test that
         redirects the database to a temporary file would still write to the
         real ``data/attendance.db``.
         """
@@ -130,7 +130,7 @@ class Database:
     def init_schema(self) -> None:
         """Create the four tables if they are not there yet.
 
-        Safe to call on every run — that is what ``IF NOT EXISTS`` buys, and it
+        Safe to call on every run; that is what ``IF NOT EXISTS`` buys, and it
         means no separate setup step before the first ``sams.py``.
         """
         with self.connect() as connection:
@@ -302,11 +302,11 @@ def known_indices() -> list[str]:
     except sqlite3.DatabaseError as error:
         # A file exists but is not a database we can read: a half-written run,
         # a schema from an older version, or something that is not SQLite at
-        # all. To the caller that is the same situation as no database yet —
+        # all. To the caller that is the same situation as no database yet,
         # and the CLIs turn it into "run sams.py first", which is the useful
         # thing to say. Letting it escape would put a traceback in front of a
         # user who has done nothing wrong.
-        log.warning("cannot read %s (%s) — treating it as empty", config.DB_PATH, error)
+        log.warning("cannot read %s (%s), treating it as empty", config.DB_PATH, error)
         return []
     return [str(row["student_index"]) for row in rows]
 

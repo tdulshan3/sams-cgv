@@ -4,7 +4,7 @@ Turns ``ctx["grey"]`` (M3's evenly-lit, denoised greyscale sheet) into
 ``ctx["binary"]``: a strictly two-valued image where ink is 255 (white) and
 paper is 0 (black). M5's line detection reads this directly, so a broken
 table line or a signature welded to its border here becomes M5's problem
-two stages later — see ``BUILD_SPEC.md`` section 9.4.
+two stages later: see ``BUILD_SPEC.md`` section 9.4.
 
 **Convention that must never change: ink = 255, paper = 0.**
 ``cv2.THRESH_BINARY_INV`` gives that polarity directly; every function below
@@ -79,7 +79,7 @@ def threshold_global(grey: np.ndarray, value: int = THRESHOLD_GLOBAL_VALUE) -> n
     """Fixed threshold baseline: ink = 255, paper = 0.
 
     Kept deliberately simple and deliberately wrong. One number cannot suit
-    a photo whose corner sits in shadow — a value tuned for the lit half of
+    a photo whose corner sits in shadow; a value tuned for the lit half of
     the page buries the shadowed half in false ink, or the reverse. It is
     kept as a report figure (``m4_global_failure.png``) precisely because it
     fails, not despite it.
@@ -101,17 +101,17 @@ def otsu_between_class_variance(grey: np.ndarray) -> np.ndarray:
 
     The idea: treat every level ``t`` as a hypothetical cut between "paper"
     and "ink" pixels. A good cut is one where the two resulting classes are
-    each tight around their own mean and far apart from each other — that
+    each tight around their own mean and far apart from each other; that
     separation is exactly what between-class variance measures, and it is
     equivalent to minimising the variance *within* each class, which is
     Otsu's original formulation.
 
     For every ``t`` in 0..255:
-        ``w0, w1``  — fraction of pixels below / at-or-above ``t``
-        ``m0, m1``  — mean intensity of each class
+        ``w0, w1``, fraction of pixels below / at-or-above ``t``
+        ``m0, m1``, mean intensity of each class
         ``variance = w0 * w1 * (m0 - m1) ** 2``
 
-    Computed with cumulative sums rather than a 256-iteration Python loop —
+    Computed with cumulative sums rather than a 256-iteration Python loop,
     same maths, vectorised.
 
     Args:
@@ -148,7 +148,7 @@ def threshold_otsu(grey: np.ndarray) -> tuple[np.ndarray, int]:
         grey: 2-D ``uint8`` greyscale image.
 
     Returns:
-        ``(binary, threshold)`` — the binary image (ink = 255) and the
+        ``(binary, threshold)``, the binary image (ink = 255) and the
         chosen threshold level, 0-255. Tested to land within one level of
         ``cv2.threshold(..., cv2.THRESH_OTSU)`` (``tests/test_binarize.py``).
     """
@@ -170,7 +170,7 @@ def threshold_adaptive(
 
     This is normally the winner on phone photos of paper, because a single
     global value cannot be right everywhere at once when lighting drifts
-    across the page — a local window adapts as it slides.
+    across the page: a local window adapts as it slides.
 
     Args:
         grey: 2-D ``uint8`` greyscale image.
@@ -178,7 +178,7 @@ def threshold_adaptive(
             closer to the centre pixel more heavily, mean weights them all
             the same.
         block: Neighbourhood size in pixels. Must be odd and at least 3.
-        c: Constant subtracted from the local mean before comparing —
+        c: Constant subtracted from the local mean before comparing;
             raising it makes the cut stricter, so fewer paper pixels flip
             to ink.
 
@@ -212,8 +212,8 @@ def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndar
     Like :func:`threshold_adaptive`, the cut-off is local rather than global,
     but the formula also scales with the local *standard deviation*: a
     smooth patch of paper gets a threshold close to its own mean (so faint
-    texture is not read as ink), while a patch with real contrast — an edge
-    of a printed line or a pen stroke — gets a threshold pulled further from
+    texture is not read as ink), while a patch with real contrast, an edge
+    of a printed line or a pen stroke, gets a threshold pulled further from
     the mean. That extra term is what ``skimage`` was built around for
     scanned documents specifically, which is why it is worth comparing
     against plain adaptive thresholding here (T5).
@@ -235,7 +235,7 @@ def threshold_sauvola(grey: np.ndarray, window: int = SAUVOLA_WINDOW) -> np.ndar
         raise ValueError(f"window must be odd, got {window}")
 
     # `r` (the dynamic range in Sauvola's formula) must be passed explicitly.
-    # Left to infer it, scikit-image reads it from the array's dtype limits —
+    # Left to infer it, scikit-image reads it from the array's dtype limits,
     # and a float array's limits are (-1, 1), so r becomes 1.0 instead of ~128.
     # The local threshold then comes out around 1000 on 0-255 data and every
     # pixel falls below it, turning the whole page to ink.
@@ -253,7 +253,7 @@ def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
     same shape and the same number of branches, one pixel thick.
 
     This is what makes *stroke length* measurable. Counting raw ink pixels
-    conflates a long thin stroke with a short fat one — press harder with
+    conflates a long thin stroke with a short fat one, press harder with
     the same pen and the pixel count rises without a single extra
     centimetre of writing. Counting skeleton pixels measures the path the
     pen actually travelled, independent of how heavily it was pressed,
@@ -264,7 +264,7 @@ def skeletonize_ink(binary: np.ndarray) -> np.ndarray:
         binary: 2-D ``uint8`` image, ink = 255.
 
     Returns:
-        2-D ``uint8`` array, same shape, ink = 255 — polarity preserved.
+        2-D ``uint8`` array, same shape, ink = 255, polarity preserved.
     """
     skeleton = _sk_skeletonize(binary > 0)
     return (skeleton.astype(np.uint8)) * 255
@@ -281,7 +281,7 @@ def line_survival_ratio(binary: np.ndarray) -> float:
 
     Measured as a longest *run* rather than by opening with a wide
     horizontal kernel, because the sheets are photographed a couple of
-    degrees off square and M2's perspective warp is not yet reliable — a
+    degrees off square and M2's perspective warp is not yet reliable; a
     strictly horizontal kernel finds nothing on a line that drifts
     vertically as it crosses the page, which makes the metric read zero for
     every method and discriminate between none of them.
@@ -293,7 +293,7 @@ def line_survival_ratio(binary: np.ndarray) -> float:
       meaningful until the sheet is genuinely flat.
     - Read it next to ``ink_percent``, never alone. Heavy closing can weld
       separate ink into one long run and inflate this while also gluing a
-      signature to the table border — the exact failure T6 warns about.
+      signature to the table border; the exact failure T6 warns about.
 
     Args:
         binary: 2-D ``uint8`` image, ink = 255.
@@ -314,7 +314,7 @@ def line_survival_ratio(binary: np.ndarray) -> float:
     for row in range(height):
         edges = np.flatnonzero(np.diff(padded[row]))
         if edges.size:
-            longest = max(longest, int(np.diff(edges)[::2].max()))
+            longest = max(longest, int(np.diff(edges)[:2].max()))
     return longest / width
 
 
@@ -325,7 +325,7 @@ def morph_open(
 ) -> np.ndarray:
     """Morphological opening: erode then dilate.
 
-    Erosion deletes any ink blob smaller than the kernel — the isolated
+    Erosion deletes any ink blob smaller than the kernel; the isolated
     specks that paper texture and sensor noise leave behind after
     thresholding. Dilation then restores every surviving stroke to its
     original thickness. Net effect: specks gone, real ink unchanged.
@@ -361,7 +361,7 @@ def morph_close(
     bridge a 3-pixel pen skip is also big enough to weld a signature to the
     printed table line above it, and M6 then measures a signature that is
     40% table. That is why the kernel here stays small and tunable in
-    ``config.py`` — see the T6 note in BUILD_SPEC.md section 9.4.
+    ``config.py``, see the T6 note in BUILD_SPEC.md section 9.4.
 
     Args:
         binary: 2-D ``uint8`` image, ink = 255.
@@ -417,7 +417,7 @@ def apply_threshold(grey: np.ndarray, method: str) -> np.ndarray:
 
     Raises:
         ValueError: ``method`` is not one of the four above. Never falls
-            through to a silent default — a typo in ``config.py`` should
+            through to a silent default, a typo in ``config.py`` should
             stop the run, not quietly change which algorithm ran.
     """
     if method == "global":
@@ -446,8 +446,8 @@ def compare_methods(grey: np.ndarray) -> list[dict]:
         grey: 2-D ``uint8`` greyscale image.
 
     Returns:
-        One dict per method — keys ``method``, ``binary``, ``ink_percent``,
-        ``components``, ``line_survival``, ``runtime_s`` — in the order
+        One dict per method, keys ``method``, ``binary``, ``ink_percent``,
+        ``components``, ``line_survival``, ``runtime_s``, in the order
         global, otsu, adaptive, sauvola.
     """
     results = []
@@ -477,7 +477,7 @@ def clean_signature_crop(mask: np.ndarray, skeleton: bool = False) -> np.ndarray
     kernels are sized against a 1600-pixel-wide page; a signature crop is a
     couple of hundred pixels across, and reusing those kernels on it erodes
     a thin ballpoint stroke to nothing. This uses
-    ``config.SIG_MORPH_OPEN_K`` / ``SIG_MORPH_CLOSE_K`` instead — opening
+    ``config.SIG_MORPH_OPEN_K`` / ``SIG_MORPH_CLOSE_K`` instead, opening
     small enough to leave a hairline stroke intact, closing sized to bridge
     the pen skips that a fast signature is full of.
 
@@ -533,7 +533,7 @@ class BinarizeStage(Stage):
         if ink_percent > 20.0:
             log.warning(
                 "ink coverage %.1f%% is far above the few percent a signing "
-                "sheet should show — check the %s threshold settings",
+                "sheet should show, check the %s threshold settings",
                 ink_percent,
                 BINARIZE_METHOD,
             )

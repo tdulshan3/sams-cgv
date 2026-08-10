@@ -1,10 +1,10 @@
-# BUILD_SPEC.md — SAMS (Student Attendance Management System)
+# BUILD_SPEC.md: SAMS (Student Attendance Management System)
 
 **Repository root file. This is the single source of truth for the whole group.**
-Owner of this file: **M1 (Lead / Integration)**. Nobody else edits it — they raise a change request.
+Owner of this file: **M1 (Lead / Integration)**. Nobody else edits it; they raise a change request.
 
 Module: CS402.3 Computer Graphics and Visualization, NSBM Green University
-Coursework weight: 20% — Prototype 60%, Report 25%, Individual contribution 15%
+Coursework weight: 20%, Prototype 60%, Report 25%, Individual contribution 15%
 Group: 9 members, M1 to M9, one module each
 
 | | Member | Module | Owns |
@@ -19,20 +19,20 @@ Group: 9 members, M1 to M9, one module each
 | M8 | | Signature Recognition | `investigate.py`, the bonus-mark module |
 | M9 | | Visualisation & QA | `infovis.py` charts, end-to-end testing |
 
-Fill in the names before submission — the front page of the report needs them.
+Fill in the names before submission, the front page of the report needs them.
 
 ---
 
 ## 0. How to use this file
 
 1. Read **§0 to §8** in full before writing any code. Those sections are shared by everyone and are not negotiable.
-2. Find your own module in **§9**. Implement **only** that. Every other module belongs to another person — if you need something changed there, message them, do not edit their file.
+2. Find your own module in **§9**. Implement **only** that. Every other module belongs to another person; if you need something changed there, message them, do not edit their file.
 3. Work task by task, in order. Commit after each task with the exact message given (§12).
 4. After each task, run the verification listed for it. Do not move on if it fails.
 5. If reality contradicts this spec, **tell M1**. M1 updates this file, commits that change, and only then does anyone write code against it. §4 is the record of every time that has already happened.
 6. Until your module lands, a placeholder in `src/stubs.py` stands in for it, so `sams.py` runs end to end for everyone from day one (§8). When you merge, M1 deletes your stub and wires you into `STAGES`.
 
-**Your brief document is not this file.** Each member was given an `M<N>_*.md` brief. Those were written before anyone had looked at the real sheets, and several of their assumptions are wrong — the sheet has 5 columns and not 4, indices are 8 digits and not 3, there are two tables on the page. **Where your brief and this file disagree, this file wins.** §4 lists every correction, and §9 repeats the ones that affect each module.
+**Your brief document is not this file.** Each member was given an `M<N>_*.md` brief. Those were written before anyone had looked at the real sheets, and several of their assumptions are wrong; the sheet has 5 columns and not 4, indices are 8 digits and not 3, there are two tables on the page. **Where your brief and this file disagree, this file wins.** §4 lists every correction, and §9 repeats the ones that affect each module.
 
 ---
 
@@ -99,13 +99,13 @@ Pillow
 ```
 
 Notes:
-- Do **not** `pip install` into the system Python on Arch — it is externally managed. Always use the venv.
-- `opencv-python` (not `opencv-python-headless`) — we need `cv2.imshow` availability even though Matplotlib is the primary display.
+- Do **not** `pip install` into the system Python on Arch; it is externally managed. Always use the venv.
+- `opencv-python` (not `opencv-python-headless`); we need `cv2.imshow` availability even though Matplotlib is the primary display.
 - Matplotlib backend: use the default interactive backend for normal runs, and `Agg` inside tests (`matplotlib.use("Agg")` at the top of test files).
 
 ---
 
-## 4. Input data — verify before coding
+## 4. Input data: verify before coding
 
 The five sheet photos come from `CGV Signing Sheets.zip`. They arrived as `1.jpeg` … `5.jpeg`, so T0 renamed each to the date printed on the sheet and converted it to lossless PNG:
 
@@ -119,7 +119,7 @@ data/info.xml
 data/ground_truth.csv         # transcribed by eye, used by M7 and M9 for accuracy
 ```
 
-`info.xml` was **not** in the material we received. It is reconstructed from Figure 1 of the brief plus the printed student table on the sheets — see the deviations below.
+`info.xml` was **not** in the material we received. It is reconstructed from Figure 1 of the brief plus the printed student table on the sheets, see the deviations below.
 
 **Measured facts (T0, `python tools/inspect_inputs.py`):**
 
@@ -128,24 +128,24 @@ data/ground_truth.csv         # transcribed by eye, used by M7 and M9 for accura
 | Number of sheets | 5 | `ls data/sheets` |
 | Image resolution (per sheet) | 3024 x 4032 portrait, all five identical | `tools/inspect_inputs.py` |
 | Colour or greyscale photos | Colour, 3 channel uint8 RGB (iPhone 7, iOS 12.1.4) | channel check |
-| EXIF orientation present | No — tag 274 absent, pixels already upright | Pillow `_getexif()` |
-| Table columns on the sheet | **5** — `No`, `Student No`, `Title`, `Student Name`, `Signature` | look at the image |
+| EXIF orientation present | No, tag 274 absent, pixels already upright | Pillow `_getexif()` |
+| Table columns on the sheet | **5**, `No`, `Student No`, `Title`, `Student Name`, `Signature` | look at the image |
 | Data rows per sheet | 6 on every sheet | count by eye |
 | Header row present | Yes, one, printed in bold | look |
 | `info.xml` root tag | `nsbm` | `head data/info.xml` |
 | `info.xml` student tag path | `nsbm/students/batches/batch/student` with `index`, `title`, `name` | read it |
-| Index format in XML | 8 digits, e.g. `10000409` — not `001` | inspection report |
-| Do sheet rows match XML order? | Yes — the XML was transcribed in sheet row order | compare |
+| Index format in XML | 8 digits, e.g. `10000409`, not `001` | inspection report |
+| Do sheet rows match XML order? | Yes, the XML was transcribed in sheet row order | compare |
 
 **Deviations from the assumptions this spec was written under. Every one of these is load-bearing:**
 
 1. **The signature column is index 4, not 3.** The sheet has a `Title` column (`Mr` / `Ms`) between the student number and the name. `SIGNATURE_COL = 4` in §6.4, and `Cell.col` in §6.1 means `0=No, 1=Student No, 2=Title, 3=Student Name, 4=Signature`.
 2. **There are two tables on each sheet.** A one-row lecture header table (`Date | time | Lecture's Name | Signatue`) sits directly above the student table. M5 must take the **lower, taller** table and ignore the header table, otherwise the lecturer's own signature is read as a student's.
-3. **Indices are 8 digits, not 3.** They are still strings — `"10000409"` — and `infovis.py 001` from the brief has no matching student in our data. The CLIs accept any index string and report unknown ones helpfully.
+3. **Indices are 8 digits, not 3.** They are still strings, `"10000409"`, and `infovis.py 001` from the brief has no matching student in our data. The CLIs accept any index string and report unknown ones helpfully.
 4. **The brief's `info.xml` is not well-formed.** Figure 1 shows `<15>` as the batch element. XML tag names may not start with a digit, so no standard parser will read that document. We carry the batch as `<batch year="2016.1">`. M7's parser should locate students with `.//student` so it survives either shape.
 5. **`info.xml` carries a `<title>` element** per student, matching the sheet's Title column. Figure 1 has only `index` and `name`.
 6. **Signature strokes routinely cross cell borders.** On `31.05.2019` and `05.07.2019` a signature spills a long way into the row below. M5's cells and M6's ink masks cannot assume a signature is contained by its box.
-7. **Ink is not always a signature.** On `21.06.2019` the last cell holds the lecturer's handwritten `ab` (absent); on `05.07.2019` one cell holds a stray red pen tick. Both are ink and both mean *absent*. Pure ink-ratio thresholding gets these wrong — this is exactly the discussion M7's decision stage must handle and the report must cover.
+7. **Ink is not always a signature.** On `21.06.2019` the last cell holds the lecturer's handwritten `ab` (absent); on `05.07.2019` one cell holds a stray red pen tick. Both are ink and both mean *absent*. Pure ink-ratio thresholding gets these wrong; this is exactly the discussion M7's decision stage must handle and the report must cover.
 8. **Six students, five sheets = 30 records** in total. Small enough that the summary table in §7 shows single digit counts, not the 42 in the illustration.
 
 Once measured, **replace the TBDs in this file and commit** before writing pipeline code. M5 and M7 depend on these answers.
@@ -156,7 +156,7 @@ Once measured, **replace the TBDs in this file and commit** before writing pipel
 
 ```
 sams-cgv/
-├── BUILD_SPEC.md              # this file — M1
+├── BUILD_SPEC.md              # this file, M1
 ├── README.md                  # M1
 ├── requirements.txt           # M1
 ├── .gitignore                 # M1
@@ -168,13 +168,13 @@ sams-cgv/
 │   ├── config.py              # M1 owns the file; each member adds a commented block
 │   ├── models.py              # M1
 │   ├── pipeline.py            # M1
-│   ├── cli.py                 # M1 — shared helpers for the three programs
-│   ├── stubs.py               # M1 — placeholder stages, deleted stage by stage
+│   ├── cli.py                 # M1, shared helpers for the three programs
+│   ├── stubs.py               # M1, placeholder stages, deleted stage by stage
 │   ├── utils/
 │   │   ├── stage.py           # M1
 │   │   ├── logging.py         # M1
 │   │   ├── timing.py          # M1
-│   │   └── cvcompat.py        # M1 — opencv 5 return-shape wrappers (§6.6)
+│   │   └── cvcompat.py        # M1, opencv 5 return-shape wrappers (§6.6)
 │   ├── io/
 │   │   ├── image_loader.py    # M2
 │   │   ├── xml_parser.py      # M7
@@ -203,9 +203,9 @@ sams-cgv/
 ├── tools/
 │   ├── inspect_inputs.py      # M1
 │   ├── make_fixtures.py       # M1
-│   ├── make_m1_figures.py     # M1 — the three figures in §13
+│   ├── make_m1_figures.py     # M1; the three figures in §13
 │   ├── seed_db.py             # M7
-│   ├── eval_recognition.py    # M8 — the genuine vs impostor experiment
+│   ├── eval_recognition.py    # M8; the genuine vs impostor experiment
 │   ├── run_all_sheets.py      # M9
 │   └── make_report_assets.py  # M9
 ├── tests/
@@ -228,7 +228,7 @@ sams-cgv/
 
 `.gitignore` must contain: `.venv/`, `__pycache__/`, `*.pyc`, `outputs/`, `data/attendance.db`, `data/fixtures/`, `.pytest_cache/`.
 
-**`data/sheets/` and `data/info.xml` ARE committed** — the marker needs them to run the prototype.
+**`data/sheets/` and `data/info.xml` ARE committed**; the marker needs them to run the prototype.
 
 ---
 
@@ -243,7 +243,7 @@ import numpy as np
 
 @dataclass
 class Student:
-    index: str                              # "001" — always a string
+    index: str                              # "001", always a string
     name: str
     row: int | None = None                  # sheet row, filled by M7
 
@@ -372,9 +372,9 @@ The three programs are thin wrappers. They must not know how anything works, onl
 | `src.viz.charts.show_all(save_only: bool) -> None` | M9 | draws the whole class |
 | `src.recognise.matcher.investigate(index: str, save_only: bool) -> None` | M8 | compares that student's signatures and reports mismatches |
 
-`save_only=True` means write to `outputs/` and open no window — needed so the whole prototype can be run over SSH or in a test.
+`save_only=True` means write to `outputs/` and open no window, needed so the whole prototype can be run over SSH or in a test.
 
-### 6.6 `src/utils/cvcompat.py` — OpenCV 5, read this before using Hough
+### 6.6 `src/utils/cvcompat.py`, OpenCV 5, read this before using Hough
 
 We pin **opencv-python 5**. Several OpenCV functions that returned `(N, 1, K)` in version 4 return `(N, K)` in version 5, and essentially every tutorial, Stack Overflow answer and textbook example online was written against version 4. Code copied from them looks correct, passes a synthetic unit test, and dies on the first real photo:
 
@@ -382,7 +382,7 @@ We pin **opencv-python 5**. Several OpenCV functions that returned `(N, 1, K)` i
 TypeError: cannot unpack non-iterable numpy.int32 object
 ```
 
-**This has already cost the group two modules** — M2 in PR #3 and M5 in PR #11 — and both times it was found only by running `sams.py` on a real sheet, never by the test suite.
+**This has already cost the group two modules**, M2 in PR #3 and M5 in PR #11, and both times it was found only by running `sams.py` on a real sheet, never by the test suite.
 
 So: **never call `cv2.HoughLinesP` directly.** Call the wrapper, which returns `(N, 4)` on every version and an empty array rather than `None`:
 
@@ -393,7 +393,7 @@ for x1, y1, x2, y2 in hough_line_segments(binary, threshold=80):
     ...
 ```
 
-`tests/test_pipeline.py::test_nobody_calls_houghlinesp_directly` fails the build if any module under `src/` reaches past it. If you hit the same shape change on another OpenCV call (`findContours`, `goodFeaturesToTrack`, ORB output), add a wrapper here rather than a fix in your own module — that is what stops it happening a third time.
+`tests/test_pipeline.py:test_nobody_calls_houghlinesp_directly` fails the build if any module under `src/` reaches past it. If you hit the same shape change on another OpenCV call (`findContours`, `goodFeaturesToTrack`, ORB output), add a wrapper here rather than a fix in your own module; that is what stops it happening a third time.
 
 ### 6.7 `src/cli.py`
 
@@ -468,8 +468,8 @@ Rules for stubs:
 - Each stub writes a **type-correct** value into `ctx` (an empty list, a grey copy, whatever the contract says) so downstream code does not crash.
 - Stubs read from `data/fixtures/` where an image is needed. The one exception is `bgr`: `GeometryStub` loads the photo the user actually passed on the command line, because faking file loading would make `sams.py <any sheet>` show the same picture for all five sheets and hide real problems such as an unreadable file.
 - `data/fixtures/` is not committed. A stub that needs a fixture and cannot find one falls back to something type-correct, logs a `WARNING` naming `tools/make_fixtures.py`, and keeps the run alive. A fresh clone must reach the summary table without running any tool first.
-- Every stub carries `# STUB — owned by M<N>, delete when their module lands`.
-- A stub is deleted the moment the real module is merged. Stubs must not survive to submission — grep for `STUB` before tagging the release.
+- Every stub carries `# STUB, owned by M<N>, delete when their module lands`.
+- A stub is deleted the moment the real module is merged. Stubs must not survive to submission, grep for `STUB` before tagging the release.
 
 | Stub | Writes to ctx |
 |---|---|
@@ -484,7 +484,7 @@ Rules for stubs:
 
 ## 9. Task lists
 
-One subsection per member. Work through your own in order — implement, verify, commit — and ignore the rest except to know what arrives from the person before you.
+One subsection per member. Work through your own in order, implement, verify, commit, and ignore the rest except to know what arrives from the person before you.
 
 Every module, without exception:
 
@@ -496,7 +496,7 @@ Every module, without exception:
 
 ---
 
-## 9.1 M1 — Lead / Integration & Progress Viewer
+## 9.1 M1: Lead / Integration & Progress Viewer
 
 **Branch** `feat/m1-core` · **Owns** `sams.py`, `infovis.py`, `investigate.py`, `src/config.py`, `src/models.py`, `src/pipeline.py`, `src/cli.py`, `src/stubs.py`, `src/utils/*`, `src/viz/progress.py`, `tools/inspect_inputs.py`, `tools/make_fixtures.py`, `tools/make_m1_figures.py`, `tests/test_pipeline.py`
 
@@ -504,7 +504,7 @@ Work in this order. Each task: implement → verify → commit.
 
 ---
 
-### T0 — Inspect the real input data
+### T0: Inspect the real input data
 Write `tools/inspect_inputs.py`. It prints per sheet: filename, resolution, channel count, file size, EXIF orientation tag. Then it prints the first 40 lines of `info.xml` and the tag structure found. Run it and **fill in the §4 table in this file**.
 
 **Verify:** `python tools/inspect_inputs.py` prints one block per sheet and the XML structure.
@@ -514,7 +514,7 @@ Write `tools/inspect_inputs.py`. It prints per sheet: filename, resolution, chan
 
 ---
 
-### T1 — Repository skeleton  *(blocking — nobody else starts before this)*
+### T1: Repository skeleton  *(blocking; nobody else starts before this)*
 Full folder tree from §5, all `__init__.py` files, `requirements.txt`, `.gitignore`, a placeholder `README.md`. Commit the sheet images and `info.xml` into `data/`.
 
 **Verify:** `python -c "import src"` succeeds; `git status` is clean; `outputs/` is ignored.
@@ -525,7 +525,7 @@ Full folder tree from §5, all `__init__.py` files, `requirements.txt`, `.gitign
 
 ---
 
-### T2 — Shared contracts  *(blocking)*
+### T2: Shared contracts  *(blocking)*
 `src/models.py`, `src/utils/stage.py`, `src/config.py` exactly as §6. Push to `main` and tell the group immediately.
 
 **Verify:** `python -c "from src.models import Student; print(Student('007','A').index)"` prints `007` as a string.
@@ -536,7 +536,7 @@ Full folder tree from §5, all `__init__.py` files, `requirements.txt`, `.gitign
 
 ---
 
-### T3 — Logging and timing
+### T3: Logging and timing
 `src/utils/logging.py` → `get_logger(name)`, format `[HH:MM:SS] LEVEL  module | message`, level controlled by a `DEBUG` flag.
 `src/utils/timing.py` → `@timed` decorator recording seconds into a module-level dict for later reporting, and logging `stage 'binarize' finished in 0.42 s`.
 
@@ -547,7 +547,7 @@ Full folder tree from §5, all `__init__.py` files, `requirements.txt`, `.gitign
 
 ---
 
-### T4 — Bootstrap fixtures  *(blocking — unblocks M4, M5, M6, M7, M8)*
+### T4: Bootstrap fixtures  *(blocking, unblocks M4, M5, M6, M7, M8)*
 `tools/make_fixtures.py`. Deliberately crude one-liner OpenCV, **not** the real pipeline. Takes the first sheet and writes:
 
 ```
@@ -564,7 +564,7 @@ Docstring must state clearly: *temporary scaffolding so downstream modules can s
 
 ---
 
-### T5 — Progress viewer
+### T5: Progress viewer
 `src/viz/progress.py`:
 
 ```python
@@ -586,7 +586,7 @@ Rules: preserve insertion order; auto-number from 01; convert BGR→RGB for Matp
 
 ---
 
-### T6 — Stubs
+### T6: Stubs
 `src/stubs.py` per §8.
 
 **Verify:** each stub instantiates and `run({})` returns a dict with the right keys.
@@ -594,7 +594,7 @@ Rules: preserve insertion order; auto-number from 01; convert BGR→RGB for Matp
 
 ---
 
-### T7 — Pipeline runner
+### T7: Pipeline runner
 `src/pipeline.py`:
 
 ```python
@@ -603,7 +603,7 @@ class Pipeline:
     def run(self, sheet: SheetMeta, students: list[Student]) -> dict: ...
 ```
 
-Behaviour: build `ctx`; for each stage — log start, time it, call `run`, push `figures()` into the viewer, log finish. On exception: log `stage 'table' failed: <message>` and re-raise wrapped in a `PipelineError` carrying the stage name. Never continue past a failure.
+Behaviour: build `ctx`; for each stage, log start, time it, call `run`, push `figures()` into the viewer, log finish. On exception: log `stage 'table' failed: <message>` and re-raise wrapped in a `PipelineError` carrying the stage name. Never continue past a failure.
 
 **Verify:** a fake two-stage pipeline runs in order; a deliberately failing stage produces an error naming that stage.
 **Commits:**
@@ -614,7 +614,7 @@ Behaviour: build `ctx`; for each stage — log start, time it, call `run`, push 
 
 ---
 
-### T8 — `sams.py`
+### T8: `sams.py`
 Per §7. Assemble the stage list from real modules where available, stubs otherwise, chosen by a single `STAGES` list at the top of the file so swapping one stage is a one-line change.
 
 **Verify:** `python sams.py data/sheets/<first>.png data/info.xml` runs to the summary table using stubs, and `python sams.py missing.png data/info.xml` exits with code 2 and a friendly message.
@@ -626,8 +626,8 @@ Per §7. Assemble the stage list from real modules where available, stubs otherw
 
 ---
 
-### T9 — `infovis.py` and `investigate.py`
-Thin wrappers only. Argument parsing, validation, friendly errors, then delegate. While M8 and M9 are unfinished, print `module not ready yet — this command will work once M9/M8 lands` and exit 0.
+### T9: `infovis.py` and `investigate.py`
+Thin wrappers only. Argument parsing, validation, friendly errors, then delegate. While M8 and M9 are unfinished, print `module not ready yet; this command will work once M9/M8 lands` and exit 0.
 
 **Verify:** both commands run and produce the placeholder message; `--help` works on all three.
 **Commits:**
@@ -637,7 +637,7 @@ Thin wrappers only. Argument parsing, validation, friendly errors, then delegate
 
 ---
 
-### T10 — Tests
+### T10: Tests
 `tests/test_pipeline.py` per §11.
 
 **Verify:** `pytest -q` passes.
@@ -645,7 +645,7 @@ Thin wrappers only. Argument parsing, validation, friendly errors, then delegate
 
 ---
 
-### T11 — Integration (one commit per real module swapped in)
+### T11: Integration (one commit per real module swapped in)
 As each member merges, delete their stub from `src/stubs.py`, wire the real stage into `STAGES`, and run the full command on all sheets.
 
 **Verify after each swap:** `python sams.py <sheet> data/info.xml` still reaches the summary table.
@@ -653,10 +653,10 @@ As each member merges, delete their stub from `src/stubs.py`, wire the real stag
 
 ---
 
-### T12 — Freeze and package
+### T12: Freeze and package
 Fill `README.md`: what it is, install, the three commands, folder map, known limits. Pin versions in `requirements.txt` from `pip freeze`. Produce the three figures in §13 with `tools/make_m1_figures.py`. Confirm `grep -r "STUB" src/` returns nothing. Tag.
 
-**The `v1.0` tag is the group's, not M1's.** `src/stubs.py` cannot be empty until T11 has swapped in all seven real modules, so the STUB check cannot pass while M1 is the only work on `main`. M1 finishing tags `v0.1-m1-core` — everything M1 owns is done, the three commands run, the stubs are still standing in. `v1.0` waits for the last swap.
+**The `v1.0` tag is the group's, not M1's.** `src/stubs.py` cannot be empty until T11 has swapped in all seven real modules, so the STUB check cannot pass while M1 is the only work on `main`. M1 finishing tags `v0.1-m1-core`; everything M1 owns is done, the three commands run, the stubs are still standing in. `v1.0` waits for the last swap.
 
 **Verify:** a clean clone into a fresh venv runs all three commands.
 **Commits:**
@@ -666,7 +666,7 @@ Fill `README.md`: what it is, install, the three commands, folder map, known lim
 
 ---
 
-## 9.2 M2 — Acquisition & Geometry
+## 9.2 M2: Acquisition & Geometry
 
 **Branch** `feat/m2-geometry` · **Owns** `src/io/image_loader.py`, `src/preprocess/deskew.py`, `tests/test_geometry.py`
 **Reads** `ctx["sheet"]` · **Writes** `ctx["bgr"]`, `ctx["warped"]` · **Blocks** M3 and M5
@@ -675,9 +675,9 @@ Fill `README.md`: what it is, install, the three commands, folder map, known lim
 
 ### What T0 measured that changes your job
 
-- All five photos are **3024 x 4032, upright, and carry no EXIF orientation tag**. Keep the EXIF rotation code — it is one line and phone photos usually do have it — but do not expect it to fire here, and do not let its absence be treated as an error.
+- All five photos are **3024 x 4032, upright, and carry no EXIF orientation tag**. Keep the EXIF rotation code, it is one line and phone photos usually do have it, but do not expect it to fire here, and do not let its absence be treated as an error.
 - The paper is photographed on a **pale desk** in every shot. Paper-against-cream is low contrast, so Canny plus largest-contour will fail on some sheets. **The fallback path in T4 is not optional garnish; budget real time for it.**
-- The sheet carries **two tables** — a one-row lecture header table above the student table. Your crop must keep **both**, and must not cut the right hand `Signature` column. M5 decides which table is which; you must not make that decision for them by cropping one away.
+- The sheet carries **two tables**, a one-row lecture header table above the student table. Your crop must keep **both**, and must not cut the right hand `Signature` column. M5 decides which table is which; you must not make that decision for them by cropping one away.
 
 ### Contract
 
@@ -697,7 +697,7 @@ class GeometryStage(Stage):
 
 def find_sheet_corners(bgr) -> np.ndarray | None:
     """(4, 2) float32, ordered top-left, top-right, bottom-right, bottom-left.
-    None when not found — that is a normal outcome, not an error."""
+    None when not found; that is a normal outcome, not an error."""
 
 def four_point_warp(bgr, corners) -> np.ndarray: ...
 def estimate_skew_angle(grey) -> float: ...
@@ -715,31 +715,31 @@ BORDER_TRIM_PX = 6
 
 ### Tasks
 
-**T1 — Loader.** `cv2.imread`, then EXIF orientation via Pillow. Clear errors. Add `resize_to_width` and downscale to `TARGET_WIDTH` — 3024 px wide is four times more than any later stage needs and makes every run slow.
+**T1: Loader.** `cv2.imread`, then EXIF orientation via Pillow. Clear errors. Add `resize_to_width` and downscale to `TARGET_WIDTH`; 3024 px wide is four times more than any later stage needs and makes every run slow.
 - `feat(io): add image loader with validation and clear errors`
 - `fix(io): correct EXIF orientation on phone photos`
 - `feat(io): add aspect-preserving downscale helper`
 
-**T2 — Corners, contour method.** Grey → Gaussian blur → Canny → `findContours` → largest → `approxPolyDP` with a tolerance loop until 4 points → order by sum and difference. Reject below `MIN_SHEET_AREA_RATIO`.
+**T2: Corners, contour method.** Grey → Gaussian blur → Canny → `findContours` → largest → `approxPolyDP` with a tolerance loop until 4 points → order by sum and difference. Reject below `MIN_SHEET_AREA_RATIO`.
 - `feat(preprocess): detect sheet outline with canny and contours`
 - `feat(preprocess): order corner points consistently top-left first`
 - `fix(preprocess): reject contours smaller than minimum area ratio`
 
-**T3 — Perspective warp.** `getPerspectiveTransform` + `warpPerspective`. Output size from the longest opposite edges so the sheet is not squashed.
+**T3: Perspective warp.** `getPerspectiveTransform` + `warpPerspective`. Output size from the longest opposite edges so the sheet is not squashed.
 - `feat(preprocess): add four point perspective warp to top-down view`
 
-**T4 — Fallback (expect to use it).** No corners → do not crash. Whole image plus a rotation correction from `estimate_skew_angle`: `HoughLinesP`, median angle of near-horizontal lines, clamped to `MAX_SKEW_CORRECTION_DEG`. The table borders are the strongest straight lines on the page, so measure the skew from those rather than the paper edge.
+**T4: Fallback (expect to use it).** No corners → do not crash. Whole image plus a rotation correction from `estimate_skew_angle`: `HoughLinesP`, median angle of near-horizontal lines, clamped to `MAX_SKEW_CORRECTION_DEG`. The table borders are the strongest straight lines on the page, so measure the skew from those rather than the paper edge.
 - `feat(preprocess): add hough based skew angle estimation`
 - `feat(preprocess): fall back to rotation only when corners not detected`
 - `feat(preprocess): log which geometry path was used`
 
-**T5 — Border trim.** Shave `BORDER_TRIM_PX` off each edge after warping so leftover desk does not become a table line for M5.
+**T5: Border trim.** Shave `BORDER_TRIM_PX` off each edge after warping so leftover desk does not become a table line for M5.
 - `feat(preprocess): trim residual border after warping`
 
-**T6 — Wrap as a Stage.** `figures()` returns original, edge map, corner overlay, warped.
+**T6: Wrap as a Stage.** `figures()` returns original, edge map, corner overlay, warped.
 - `feat(preprocess): wrap geometry logic in GeometryStage class`
 
-**T7 — All five sheets.** Record which path each used and whether the result is straight. **Verify by eye that both tables and all five columns survive the crop** — that is the acceptance test M5 will hold you to. Tune Canny in `config.py` only.
+**T7: All five sheets.** Record which path each used and whether the result is straight. **Verify by eye that both tables and all five columns survive the crop**; that is the acceptance test M5 will hold you to. Tune Canny in `config.py` only.
 - `fix(preprocess): tune canny thresholds for low contrast desk backgrounds`
 - `docs(preprocess): note per-sheet geometry results`
 
@@ -749,14 +749,14 @@ BORDER_TRIM_PX = 6
 
 ---
 
-## 9.3 M3 — Greyscale & Enhancement
+## 9.3 M3: Greyscale & Enhancement
 
 **Branch** `feat/m3-enhance` · **Owns** `src/preprocess/enhance.py`, `tests/test_enhance.py`
 **Reads** `ctx["warped"]` · **Writes** `ctx["grey"]` · **Blocks** M4
 
 ### What T0 measured that changes your job
 
-- All five sheets are **real colour** — no greyscale sheet to special-case.
+- All five sheets are **real colour**, no greyscale sheet to special-case.
 - The photos have visible **paper texture, fold creases and a soft shadow gradient** across the page. Shadow removal (T3) is the task that actually matters here; the greyscale method barely moves the result. Spend your time accordingly, and say so honestly in the report.
 - Your output feeds M4, whose output feeds M5's **line detection**. An enhancement that looks lovely but thins the printed table lines is a bad enhancement. Check with M5, not just with your eyes.
 
@@ -777,7 +777,7 @@ def remove_shadow(grey) -> np.ndarray: ...
 def enhance_contrast(grey, method: str = "clahe") -> np.ndarray: ...
 ```
 
-Unknown method name raises `ValueError` — never fall through silently to a default.
+Unknown method name raises `ValueError`, never fall through silently to a default.
 
 `src/config.py` under `# --- M3 enhancement ---`:
 
@@ -792,30 +792,30 @@ CLAHE_CLIP, CLAHE_GRID = 2.0, (8, 8)
 
 ### Tasks
 
-**T1 — Greyscale, four ways.** `average` and `luminosity` in plain NumPy so you can explain why green dominates (eye sensitivity). Compare all four on one sheet.
+**T1: Greyscale, four ways.** `average` and `luminosity` in plain NumPy so you can explain why green dominates (eye sensitivity). Compare all four on one sheet.
 - `feat(preprocess): add average and luminosity greyscale with numpy`
 - `feat(preprocess): add lightness and max-channel greyscale variants`
 - `docs(preprocess): note why luminosity weights differ per channel`
 
-**T2 — Denoise, four ways.** Gaussian, median, bilateral, non-local means. **Measure** PSNR/SSIM and runtime — do not claim bilateral wins, show it.
+**T2: Denoise, four ways.** Gaussian, median, bilateral, non-local means. **Measure** PSNR/SSIM and runtime, do not claim bilateral wins, show it.
 - `feat(preprocess): add gaussian and median denoising`
 - `feat(preprocess): add bilateral filter to keep stroke edges sharp`
 - `feat(preprocess): add non-local means denoising option`
 - `test(preprocess): measure psnr and runtime for each denoise method`
 
-**T3 — Shadow removal (the big win).** Dilate with a large kernel then median blur to estimate the lighting map, divide, rescale to 0–255.
+**T3: Shadow removal (the big win).** Dilate with a large kernel then median blur to estimate the lighting map, divide, rescale to 0–255.
 - `feat(preprocess): estimate background lighting with morphology`
 - `feat(preprocess): divide by background to flatten uneven lighting`
 - `fix(preprocess): rescale to full range after shadow division`
 
-**T4 — Contrast.** Global histogram equalisation vs CLAHE, with the histograms shown.
+**T4: Contrast.** Global histogram equalisation vs CLAHE, with the histograms shown.
 - `feat(preprocess): add global histogram equalisation`
 - `feat(preprocess): add clahe local contrast enhancement`
 
-**T5 — Wrap as a Stage.** Chain grey → shadow → denoise → contrast, every step switchable from `config.py`. `figures()` returns each intermediate.
+**T5: Wrap as a Stage.** Chain grey → shadow → denoise → contrast, every step switchable from `config.py`. `figures()` returns each intermediate.
 - `feat(preprocess): wrap enhancement chain in EnhanceStage class`
 
-**T6 — Tune with M4 and M5.** Your best-looking image is not always the one that binarises best, and the one that binarises best is not always the one whose table lines survive. Agree final settings with both and write them into `config.py`.
+**T6: Tune with M4 and M5.** Your best-looking image is not always the one that binarises best, and the one that binarises best is not always the one whose table lines survive. Agree final settings with both and write them into `config.py`.
 - `fix(preprocess): tune clahe clip limit after binarisation feedback`
 - `docs(preprocess): record agreed enhancement settings`
 
@@ -825,7 +825,7 @@ CLAHE_CLIP, CLAHE_GRID = 2.0, (8, 8)
 
 ---
 
-## 9.4 M4 — Binarisation & Morphology
+## 9.4 M4: Binarisation & Morphology
 
 **Branch** `feat/m4-binarize` · **Owns** `src/preprocess/binarize.py`, `tests/test_binarize.py`
 **Reads** `ctx["grey"]` · **Writes** `ctx["binary"]` · **Blocks** M5, and later helps M8
@@ -834,8 +834,8 @@ CLAHE_CLIP, CLAHE_GRID = 2.0, (8, 8)
 
 ### What T0 measured that changes your job
 
-- Your real customer is **M5's line detection**, not the human eye. The printed table lines are thin — closing that repairs a broken pen stroke can also weld a signature to the border line, and M6 then measures a signature that is 40% table. Tune with M5 watching.
-- Two cells on `05.07.2019` and `21.06.2019` contain **faint marks that are not signatures**. Do not tune your threshold until they disappear — losing them makes M7's job look easy and the accuracy numbers dishonest. Keep them, and let M7's rule reject them.
+- Your real customer is **M5's line detection**, not the human eye. The printed table lines are thin, closing that repairs a broken pen stroke can also weld a signature to the border line, and M6 then measures a signature that is 40% table. Tune with M5 watching.
+- Two cells on `05.07.2019` and `21.06.2019` contain **faint marks that are not signatures**. Do not tune your threshold until they disappear; losing them makes M7's job look easy and the accuracy numbers dishonest. Keep them, and let M7's rule reject them.
 
 ### Contract
 
@@ -846,7 +846,7 @@ class BinarizeStage(Stage):
 
 def threshold_global(grey, value: int = 127) -> np.ndarray: ...
 def threshold_otsu(grey) -> tuple[np.ndarray, int]:
-    """Binary image AND the chosen threshold. Search written by hand — see T2."""
+    """Binary image AND the chosen threshold. Search written by hand, see T2."""
 def threshold_adaptive(grey, method="gaussian", block=35, c=10) -> np.ndarray: ...
 def threshold_sauvola(grey, window=25) -> np.ndarray: ...
 def morph_clean(binary, open_k=2, close_k=3) -> np.ndarray: ...
@@ -866,61 +866,61 @@ MORPH_OPEN_K, MORPH_CLOSE_K = 2, 3
 
 ### Tasks
 
-**T1 — Global baseline, kept as a failure exhibit.** One fixed value cannot suit a photo with a shadowed corner. Keep the failure image, it is a good figure.
+**T1: Global baseline, kept as a failure exhibit.** One fixed value cannot suit a photo with a shadowed corner. Keep the failure image, it is a good figure.
 - `feat(preprocess): add global fixed threshold baseline`
 
-**T2 — Otsu, written by hand.** Do not stop at `cv2.THRESH_OTSU`. Implement it: 256-bin normalised histogram; for each candidate `t` compute class weights `w0, w1` and means `m0, m1`; maximise between-class variance `w0 * w1 * (m0 - m1)²`. Then check your value matches OpenCV within ±1 — that check is both a strong test and a strong report point.
+**T2: Otsu, written by hand.** Do not stop at `cv2.THRESH_OTSU`. Implement it: 256-bin normalised histogram; for each candidate `t` compute class weights `w0, w1` and means `m0, m1`; maximise between-class variance `w0 * w1 * (m0 - m1)²`. Then check your value matches OpenCV within ±1; that check is both a strong test and a strong report point.
 - `feat(preprocess): implement otsu threshold search with numpy`
 - `feat(preprocess): return chosen threshold value alongside binary image`
 - `test(preprocess): verify custom otsu matches opencv within one level`
 
-**T3 — Adaptive.** Mean and Gaussian. Normally the winner on phone photos. Sweep `block` and `c`, record the best pair. Force odd block sizes or raise a clear `ValueError`.
+**T3: Adaptive.** Mean and Gaussian. Normally the winner on phone photos. Sweep `block` and `c`, record the best pair. Force odd block sizes or raise a clear `ValueError`.
 - `feat(preprocess): add adaptive mean and gaussian thresholding`
 - `fix(preprocess): force odd block size and validate parameters`
 - `docs(preprocess): record adaptive block and c sweep results`
 
-**T4 — Sauvola.** `skimage.filters.threshold_sauvola`, built for documents. Compare against adaptive.
+**T4: Sauvola.** `skimage.filters.threshold_sauvola`, built for documents. Compare against adaptive.
 - `feat(preprocess): add sauvola local thresholding for documents`
 
-**T5 — Compare properly (this earns marks).** Per method, per sheet: ink pixel percentage (a few percent, not 40), connected component count, **whether M5's table lines survive**, runtime.
+**T5: Compare properly (this earns marks).** Per method, per sheet: ink pixel percentage (a few percent, not 40), connected component count, **whether M5's table lines survive**, runtime.
 - `feat(preprocess): add binarisation comparison harness with metrics`
 - `docs(preprocess): record method comparison across all five sheets`
 
-**T6 — Morphology.** Opening kills specks, closing repairs broken strokes. Try `MORPH_ELLIPSE` and `MORPH_RECT`.
+**T6: Morphology.** Opening kills specks, closing repairs broken strokes. Try `MORPH_ELLIPSE` and `MORPH_RECT`.
 - `feat(preprocess): add morphological opening to remove speckle noise`
 - `feat(preprocess): add closing to repair broken pen strokes`
 - `fix(preprocess): reduce closing kernel to stop strokes merging with table lines`
 
-**T7 — Skeletonisation.** `skimage.morphology.skeletonize`. M6 needs `stroke_length` and M8 needs it too.
+**T7: Skeletonisation.** `skimage.morphology.skeletonize`. M6 needs `stroke_length` and M8 needs it too.
 - `feat(preprocess): add skeletonisation for one pixel wide strokes`
 
-**T8 — Wrap as a Stage.** Method from `config.py`, `figures()` returns raw and cleaned.
+**T8: Wrap as a Stage.** Method from `config.py`, `figures()` returns raw and cleaned.
 - `feat(preprocess): wrap thresholding chain in BinarizeStage class`
 
-**T9 — Help M8.** `clean_signature_crop(mask)` tuned for small crops, not whole sheets. Ask M8 what they need first.
+**T9: Help M8.** `clean_signature_crop(mask)` tuned for small crops, not whole sheets. Ask M8 what they need first.
 - `feat(preprocess): add signature crop cleaning helper for recognition`
 
 **Verify:** `set(np.unique(ctx["binary"])) <= {0, 255}`, ink is white, and M5 confirms the table lines are unbroken.
 
-**Figures:** `m4_threshold_comparison.png`, `m4_otsu_histogram.png` (**your best figure — the between-class variance curve with the chosen threshold marked**), `m4_global_failure.png`, `m4_morphology.png`, `m4_metrics.png`
+**Figures:** `m4_threshold_comparison.png`, `m4_otsu_histogram.png` (**your best figure, the between-class variance curve with the chosen threshold marked**), `m4_global_failure.png`, `m4_morphology.png`, `m4_metrics.png`
 
 ---
 
-## 9.5 M5 — Table Detection
+## 9.5 M5: Table Detection
 
 **Branch** `feat/m5-table` · **Owns** `src/table/line_detect.py`, `src/table/grid_builder.py`, `src/table/cell_extract.py`, `tests/test_table.py`
 **Reads** `ctx["binary"]`, `ctx["warped"]` · **Writes** `ctx["grid"]`, `ctx["cells"]` · **Blocks** M6, and so M7, M8, M9
 
-The hardest single module. Get a rough `list[Cell]` into M6's hands early — rough and early beats perfect and late.
+The hardest single module. Get a rough `list[Cell]` into M6's hands early, rough and early beats perfect and late.
 
-### What T0 measured that changes your job — read this twice
+### What T0 measured that changes your job, read this twice
 
 **Your brief document is wrong on all four of these. This file wins.**
 
 1. **There are 5 columns, not 4.** `No | Student No | Title | Student Name | Signature`. So `EXPECTED_COLS = 5` and the signature is column **4**. Always use `config.SIGNATURE_COL`, never a literal.
-2. **There are two tables on the page.** A one-row lecture header table (`Date | time | Lecture's Name | Signatue`) sits directly above the student table, and **it also has a signature in its last column — the lecturer's.** If you pick the wrong table, or merge the two, the lecturer's signature is reported as a student's and the whole system is wrong in a way that still looks plausible. Select the **lower** block of horizontal lines, the one with 7 lines bounding 6 data rows plus a header. Log which one you took.
+2. **There are two tables on the page.** A one-row lecture header table (`Date | time | Lecture's Name | Signatue`) sits directly above the student table, and **it also has a signature in its last column, the lecturer's.** If you pick the wrong table, or merge the two, the lecturer's signature is reported as a student's and the whole system is wrong in a way that still looks plausible. Select the **lower** block of horizontal lines, the one with 7 lines bounding 6 data rows plus a header. Log which one you took.
 3. **6 data rows on every sheet, one header row.** `Grid.header_rows = 1`, `row = 0` is student 1. Row count is a hard check: if you do not get 6, warn loudly (§10) rather than silently returning 5.
-4. **Signatures cross cell borders.** On `31.05.2019` and `05.07.2019` a signature runs well into the row below. Crop with a small vertical pad rather than a hard cut, and see §14 decision 1 — you and M6 agree the rule together.
+4. **Signatures cross cell borders.** On `31.05.2019` and `05.07.2019` a signature runs well into the row below. Crop with a small vertical pad rather than a hard cut, and see §14 decision 1; you and M6 agree the rule together.
 
 ### Contract
 
@@ -957,7 +957,7 @@ def crop_cell(warped, bbox, inset: int = 4, pad_y: int = 0) -> np.ndarray:
     """Inset excludes the border; pad_y keeps an overflowing signature."""
 ```
 
-`ctx["cells"]` is the signature column only, `.image` cropped from **`warped` in colour** — never the binary image, M6 needs the pen colour — with `.row` set and no gaps.
+`ctx["cells"]` is the signature column only, `.image` cropped from **`warped` in colour**, never the binary image, M6 needs the pen colour, with `.row` set and no gaps.
 
 `src/config.py` under `# --- M5 table detection ---`:
 
@@ -975,53 +975,53 @@ EXPECTED_DATA_ROWS = 6
 
 ### Tasks
 
-**T1 — Line masks by morphology.** Horizontal: erode then dilate with a `(width * H_KERNEL_RATIO, 1)` kernel; vertical with `(1, height * V_KERNEL_RATIO)`. Far more reliable than Hough on printed tables — do this first.
+**T1: Line masks by morphology.** Horizontal: erode then dilate with a `(width * H_KERNEL_RATIO, 1)` kernel; vertical with `(1, height * V_KERNEL_RATIO)`. Far more reliable than Hough on printed tables, do this first.
 - `feat(table): extract horizontal line mask with wide morphology kernel`
 - `feat(table): extract vertical line mask with tall morphology kernel`
 - `feat(table): combine masks to visualise the detected table skeleton`
 
-**T2 — Positions from projection profiles.** Sum the mask along an axis, find peaks, merge peaks closer than `LINE_MERGE_TOL`.
+**T2: Positions from projection profiles.** Sum the mask along an axis, find peaks, merge peaks closer than `LINE_MERGE_TOL`.
 - `feat(table): convert line masks to positions using projection profiles`
 - `feat(table): merge nearby peaks into single line positions`
 
-**T3 — Pick the student table.** Group the horizontal lines into bands separated by large gaps. The lecture header table is a short band of 2–3 lines near the top; the student table is the tall band of 7. Take the student table, log the choice, and keep both drawn in a figure so the report can show the trap.
+**T3: Pick the student table.** Group the horizontal lines into bands separated by large gaps. The lecture header table is a short band of 2–3 lines near the top; the student table is the tall band of 7. Take the student table, log the choice, and keep both drawn in a figure so the report can show the trap.
 - `feat(table): group horizontal lines into table bands`
 - `feat(table): select the student table and discard the lecture header table`
 - `fix(table): warn when the expected two table bands are not found`
 
-**T4 — Hough as cross-check.** `HoughLinesP`, keep lines within ±5° of axis-aligned. Compare with T2. A cross-check and a figure — not the primary method.
+**T4: Hough as cross-check.** `HoughLinesP`, keep lines within ±5° of axis-aligned. Compare with T2. A cross-check and a figure, not the primary method.
 - `feat(table): add hough line detection as cross check`
 - `docs(table): compare morphology and hough line positions`
 
-**T5 — Grid repair.** Real photos lose lines. Find the median row spacing, insert a line where a gap is close to a multiple of it, drop lines below `MIN_ROW_HEIGHT` / `MIN_COL_WIDTH`, and warn loudly when the column count is not `EXPECTED_COLS` or the data row count is not `EXPECTED_DATA_ROWS`.
+**T5: Grid repair.** Real photos lose lines. Find the median row spacing, insert a line where a gap is close to a multiple of it, drop lines below `MIN_ROW_HEIGHT` / `MIN_COL_WIDTH`, and warn loudly when the column count is not `EXPECTED_COLS` or the data row count is not `EXPECTED_DATA_ROWS`.
 - `feat(table): estimate median row spacing`
 - `feat(table): insert missing horizontal lines from regular spacing`
 - `fix(table): drop duplicate lines below minimum spacing`
 - `feat(table): warn when detected row or column count is unexpected`
 
-**T6 — Header handling.** Set `Grid.header_rows = 1` so data row 0 is the first student.
+**T6: Header handling.** Set `Grid.header_rows = 1` so data row 0 is the first student.
 - `feat(table): detect and skip the header row`
 
-**T7 — Cell cropping.** `CELL_INSET` to keep the border out, `CELL_PAD_Y` to keep an overflowing signature in. Build `Cell` objects for `config.SIGNATURE_COL` from the **warped colour image**.
+**T7: Cell cropping.** `CELL_INSET` to keep the border out, `CELL_PAD_Y` to keep an overflowing signature in. Build `Cell` objects for `config.SIGNATURE_COL` from the **warped colour image**.
 - `feat(table): crop cells with inset to exclude table borders`
 - `feat(table): pad cell crops vertically for overflowing signatures`
 - `feat(table): build Cell objects for the signature column`
 - `fix(table): crop from warped colour image so pen colour is preserved`
 
-**T8 — Wrap as a Stage.** `figures()` returns the line masks and a grid overlay on the warped sheet.
+**T8: Wrap as a Stage.** `figures()` returns the line masks and a grid overlay on the warped sheet.
 - `feat(table): wrap grid detection in TableStage class`
 
-**T9 — All five sheets.** Record detected rows and columns per sheet against the true 6 and 5. Tune ratios in `config.py` only.
+**T9: All five sheets.** Record detected rows and columns per sheet against the true 6 and 5. Tune ratios in `config.py` only.
 - `fix(table): tune kernel ratios for sheets with faint printed lines`
 - `docs(table): record per sheet row and column detection accuracy`
 
 **Verify:** on all five sheets, `len(ctx["cells"]) == 6` and every crop shown in `m5_cells_numbered.png` is a signature box and not a name.
 
-**Figures:** `m5_line_masks.png`, `m5_projection_profiles.png`, `m5_grid_overlay.png`, `m5_cells_numbered.png`, `m5_grid_repair.png`, `m5_two_tables.png` (**the header table and the student table distinguished — this is the figure that shows you understood the page**), `m5_hough_vs_morphology.png`
+**Figures:** `m5_line_masks.png`, `m5_projection_profiles.png`, `m5_grid_overlay.png`, `m5_cells_numbered.png`, `m5_grid_repair.png`, `m5_two_tables.png` (**the header table and the student table distinguished; this is the figure that shows you understood the page**), `m5_hough_vs_morphology.png`
 
 ---
 
-## 9.6 M6 — Ink Segmentation
+## 9.6 M6: Ink Segmentation
 
 **Branch** `feat/m6-ink` · **Owns** `src/detect/cell_clean.py`, `src/detect/ink_mask.py`, `tests/test_ink.py`
 **Reads** `ctx["cells"]` · **Writes** `ctx["ink"]` · **Blocks** M7, and supplies M8's crops
@@ -1030,10 +1030,10 @@ The brief says students sign **using different colour pens**. Handling that is y
 
 ### What T0 measured that changes your job
 
-- The five sheets are signed in **blue ballpoint almost throughout**, with **one red mark** on `05.07.2019`. So your multi-colour machinery is right, but you cannot prove it on this data alone — **make synthetic green and black test cells** and prove it there, then say plainly in the report that the sample happened to be mostly blue. A measured limitation beats an unproven claim.
-- **Two cells contain ink that is not a signature**: the lecturer's handwritten `ab` on `21.06.2019`, and a small stray red tick on `05.07.2019`. Both mean *absent*. **Your job is not to decide that** — it is to supply features sharp enough that M7 can. `stroke_length`, `filled_ratio`, `aspect` and `components` are what separate a signature from a two-letter word or a 3 mm tick. See §14 decision 2.
+- The five sheets are signed in **blue ballpoint almost throughout**, with **one red mark** on `05.07.2019`. So your multi-colour machinery is right, but you cannot prove it on this data alone, **make synthetic green and black test cells** and prove it there, then say plainly in the report that the sample happened to be mostly blue. A measured limitation beats an unproven claim.
+- **Two cells contain ink that is not a signature**: the lecturer's handwritten `ab` on `21.06.2019`, and a small stray red tick on `05.07.2019`. Both mean *absent*. **Your job is not to decide that**; it is to supply features sharp enough that M7 can. `stroke_length`, `filled_ratio`, `aspect` and `components` are what separate a signature from a two-letter word or a 3 mm tick. See §14 decision 2.
 - **Signatures overflow their cells.** A stroke starting in row 3 can end in row 4. Attribute a connected component to the row holding most of its pixels, and agree the rule with M5 (§14 decision 1).
-- **Crop filenames: use the student index, not the row number.** Your brief says `row_<n>.png`. It must be `outputs/cells/<sheet_date>/<index>.png` and `<index>_mask.png`, because that is what §5.4 defines, what `investigate.py` globs to count samples, and what M8 looks up. The `Cell` does not know its index — M7 attaches it — so either write the crops in `DecisionStage` after mapping, or have M5 pass the row and M7 rename. **Agree this with M7 before you write it.**
+- **Crop filenames: use the student index, not the row number.** Your brief says `row_<n>.png`. It must be `outputs/cells/<sheet_date>/<index>.png` and `<index>_mask.png`, because that is what §5.4 defines, what `investigate.py` globs to count samples, and what M8 looks up. The `Cell` does not know its index, M7 attaches it, so either write the crops in `DecisionStage` after mapping, or have M5 pass the row and M7 rename. **Agree this with M7 before you write it.**
 
 ### Contract
 
@@ -1076,63 +1076,63 @@ PEN_HUE_RANGES = {
 
 ### Tasks
 
-**T1 — Clean the crop.** Remove long straight runs touching the crop edge, drop blobs touching the outer 2-pixel frame. M5's inset helps but does not finish the job.
+**T1: Clean the crop.** Remove long straight runs touching the crop edge, drop blobs touching the outer 2-pixel frame. M5's inset helps but does not finish the job.
 - `feat(detect): remove leftover table border lines inside cell crops`
 - `fix(detect): drop blobs touching the crop edge`
 
-**T2 — Colour ink mask (headline work).** HSV. Coloured pens: `saturation >= SAT_MIN` — white paper has almost none. Black pen has no saturation either, so add `value <= VAL_MAX`. Combine with OR. Also try LAB's `a`/`b` channels and report which won.
+**T2: Colour ink mask (headline work).** HSV. Coloured pens: `saturation >= SAT_MIN`; white paper has almost none. Black pen has no saturation either, so add `value <= VAL_MAX`. Combine with OR. Also try LAB's `a`/`b` channels and report which won.
 - `feat(detect): add hsv saturation mask for coloured pen ink`
 - `feat(detect): add value threshold branch to catch black pen`
 - `feat(detect): add lab colour space ink mask variant`
 - `feat(detect): combine colour and darkness masks into one ink mask`
 - `docs(detect): compare hsv and lab masking results`
 
-**T3 — Clean the mask.** Drop components under `MIN_BLOB_AREA`, small close to join broken strokes. **Never dilate heavily** — it inflates `ink_ratio` and makes empty cells look signed.
+**T3: Clean the mask.** Drop components under `MIN_BLOB_AREA`, small close to join broken strokes. **Never dilate heavily**; it inflates `ink_ratio` and makes empty cells look signed.
 - `feat(detect): drop connected components below minimum area`
 - `feat(detect): close small gaps within pen strokes`
 
-**T4 — Pen colour.** Mean hue of ink pixels through `PEN_HUE_RANGES`; low saturation means black. Handle red's wrap-around at 0/180.
+**T4: Pen colour.** Mean hue of ink pixels through `PEN_HUE_RANGES`; low saturation means black. Handle red's wrap-around at 0/180.
 - `feat(detect): identify dominant pen colour from ink hue`
 - `feat(detect): count pen colour usage per sheet`
 
-**T5 — Features for M7.** Full `InkResult`. `stroke_length` comes from M4's `skeletonize_ink` — ask, do not rewrite it. Agree every key name with M7 **before** writing.
+**T5: Features for M7.** Full `InkResult`. `stroke_length` comes from M4's `skeletonize_ink`, ask, do not rewrite it. Agree every key name with M7 **before** writing.
 - `feat(detect): compute ink ratio and connected component count`
 - `feat(detect): add stroke bounding box and aspect ratio features`
 - `feat(detect): add skeleton length and fill ratio features`
 
-**T6 — Save crops for M8.** Colour crop and mask to `outputs/cells/<sheet_date>/<index>.png` and `<index>_mask.png`, paths into `InkResult.crop_path` / `.mask_path`. Without these there is no `investigate.py`.
+**T6: Save crops for M8.** Colour crop and mask to `outputs/cells/<sheet_date>/<index>.png` and `<index>_mask.png`, paths into `InkResult.crop_path` / `.mask_path`. Without these there is no `investigate.py`.
 - `feat(detect): save cell crops and masks for signature recognition`
 
-**T7 — Wrap as a Stage.** `figures()` returns a montage of the cells and their masks.
+**T7: Wrap as a Stage.** `figures()` returns a montage of the cells and their masks.
 - `feat(detect): wrap ink segmentation in InkStage class`
 
-**T8 — Tune on all five sheets.** Look at failures with your own eyes: faint ink, a signature crossing rows, a printed dot read as ink.
+**T8: Tune on all five sheets.** Look at failures with your own eyes: faint ink, a signature crossing rows, a printed dot read as ink.
 - `fix(detect): lower saturation threshold for faded ink`
 - `docs(detect): record ink segmentation failure cases`
 
-**Verify:** the **three** genuinely empty cells — `28.06.2019 / 10009301`, `28.06.2019 / 10009302`, `05.07.2019 / 10009301` — give near-zero `ink_ratio`, and every real signature gives a clearly higher one. The other two absences (`21.06.2019 / 10009306` and `05.07.2019 / 10009303`) **do** contain ink and must not be masked away; they are M7's problem, not yours.
+**Verify:** the **three** genuinely empty cells, `28.06.2019 / 10009301`, `28.06.2019 / 10009302`, `05.07.2019 / 10009301`, give near-zero `ink_ratio`, and every real signature gives a clearly higher one. The other two absences (`21.06.2019 / 10009306` and `05.07.2019 / 10009303`) **do** contain ink and must not be masked away; they are M7's problem, not yours.
 
-**Figures:** `m6_colour_spaces.png`, `m6_hue_scatter.png`, `m6_mask_panels.png`, `m6_border_removal.png`, `m6_pen_colour_counts.png`, `m6_empty_vs_signed.png`, `m6_ink_that_is_not_a_signature.png` (**the `ab` cell and the red tick beside a real signature, with all their features printed — this is the figure the discussion section needs**)
+**Figures:** `m6_colour_spaces.png`, `m6_hue_scatter.png`, `m6_mask_panels.png`, `m6_border_removal.png`, `m6_pen_colour_counts.png`, `m6_empty_vs_signed.png`, `m6_ink_that_is_not_a_signature.png` (**the `ab` cell and the red tick beside a real signature, with all their features printed; this is the figure the discussion section needs**)
 
 ---
 
-## 9.7 M7 — Decision & Database
+## 9.7 M7: Decision & Database
 
 **Branch** `feat/m7-decision-db` · **Owns** `src/io/xml_parser.py`, `src/io/db.py`, `src/detect/presence.py`, `tools/seed_db.py`, `tests/test_decision.py`, `tests/test_db.py`
 **Reads** `ctx["ink"]`, `ctx["students"]` · **Writes** `ctx["records"]`, the database · **Blocks** M8 and M9
 
-Last stage of the pipeline and the only source of data for M8 and M9. **Push the database schema and `tools/seed_db.py` before you write a line of decision logic** — two people are idle until you do.
+Last stage of the pipeline and the only source of data for M8 and M9. **Push the database schema and `tools/seed_db.py` before you write a line of decision logic**; two people are idle until you do.
 
 ### What T0 measured that changes your job
 
 1. **`info.xml` is not the shape your brief guesses.** It is not `<info><students><student>`. The real file, reconstructed and committed, is:
    `nsbm/students/batches/batch/student` with `index`, `title`, `name`, plus a sibling `nsbm/subject` holding `code`, `name`, `degree`, `lecturer`.
-   **Find students with `.//student`** and read the subject with `.//subject`. That survives the batch element changing shape, which matters because the brief's own Figure 1 shows `<15>` — a tag that starts with a digit and therefore parses in nothing. See §4 deviation 4.
+   **Find students with `.//student`** and read the subject with `.//subject`. That survives the batch element changing shape, which matters because the brief's own Figure 1 shows `<15>`; a tag that starts with a digit and therefore parses in nothing. See §4 deviation 4.
 2. **Indices are 8 digits**, e.g. `10000409`. Still strings. `int()` anywhere near an index is a bug.
 3. **Positional mapping is safe here.** The XML was transcribed from the sheets in row order, so sheet row *n* is XML student *n*. Still warn when the counts disagree (§10). OCR verification of the printed index column stays optional.
-4. **`data/ground_truth.csv` already exists** — 30 rows, hand-transcribed by M1 in T0, with a `note` column naming the two awkward cells. Your T5 is to *verify and use* it, not create it. Check a sample against the images yourself before you trust it.
+4. **`data/ground_truth.csv` already exists**, 30 rows, hand-transcribed by M1 in T0, with a `note` column naming the two awkward cells. Your T5 is to *verify and use* it, not create it. Check a sample against the images yourself before you trust it.
 5. **The interesting accuracy cases are known in advance.** `21.06.2019 / 10009306` holds `ab`; `05.07.2019 / 10009303` holds a stray red tick. Both are ink and both are absent. Report your accuracy with and without them, and say which way you leaned on false-positive against false-negative.
-6. **`src/io/db.py` must expose `known_indices()` and `is_empty()`** as module-level functions — §6.5. `infovis.py` and `investigate.py` call them to give helpful errors. Wrap the `Database` class; do not make the CLIs construct one.
+6. **`src/io/db.py` must expose `known_indices()` and `is_empty()`** as module-level functions, §6.5. `infovis.py` and `investigate.py` call them to give helpful errors. Wrap the `Database` class; do not make the CLIs construct one.
 
 ### Contract
 
@@ -1142,7 +1142,7 @@ def parse_info(path) -> tuple[list[Student], dict]:
     """Students in sheet order, plus meta: subject_code, subject_name, lecturer."""
 
 def parse_students(path) -> list[Student]:
-    """Thin wrapper — this is what sams.py imports (§6.5)."""
+    """Thin wrapper; this is what sams.py imports (§6.5)."""
 
 # src/detect/presence.py
 class DecisionStage(Stage):
@@ -1169,7 +1169,7 @@ def known_indices() -> list[str]: ...     # §6.5, called by the CLIs
 def is_empty() -> bool: ...               # §6.5, called by the CLIs
 ```
 
-Schema — four tables in `data/attendance.db`:
+Schema: four tables in `data/attendance.db`:
 
 ```sql
 CREATE TABLE IF NOT EXISTS students (
@@ -1221,57 +1221,57 @@ CONF_LOW, CONF_HIGH = 0.008, 0.030
 
 ### Tasks
 
-**T1 — Database first.** Schema, `Database`, `init_schema`, the two module-level helpers, and `tools/seed_db.py` with fake data. Push and tell M8 and M9 the same hour.
+**T1: Database first.** Schema, `Database`, `init_schema`, the two module-level helpers, and `tools/seed_db.py` with fake data. Push and tell M8 and M9 the same hour.
 - `feat(db): add sqlite schema for students, sheets and attendance`
 - `feat(db): add Database class with context managed connections`
 - `feat(db): add signatures table for recognition module`
 - `feat(db): expose known_indices and is_empty for the cli helpers`
 - `chore(tools): add db seeder with fake data for downstream development`
 
-**T2 — XML parser.** `xml.etree.ElementTree`, `.//student`. Indices stay strings. Clear errors for malformed or missing tags.
+**T2: XML parser.** `xml.etree.ElementTree`, `.//student`. Indices stay strings. Clear errors for malformed or missing tags.
 - `feat(io): parse info.xml into student and subject records`
 - `fix(io): keep student indices as strings to preserve leading zeros`
 - `fix(io): give clear errors for malformed or missing xml tags`
 
-**T3 — Row to student mapping.** Positional first. OCR verification of the printed index column (`pytesseract`, digits only) only if time allows; on disagreement, warn and trust the XML.
+**T3: Row to student mapping.** Positional first. OCR verification of the printed index column (`pytesseract`, digits only) only if time allows; on disagreement, warn and trust the XML.
 - `feat(detect): map sheet rows to students by position`
 - `feat(detect): warn when row count and xml student count differ`
 - `feat(detect): optional ocr verification of printed index column`
 
-**T4 — The decision rule.** Never one number alone:
+**T4: The decision rule.** Never one number alone:
 ```
 present = ink_ratio >= INK_RATIO_THRESHOLD
           and components >= MIN_COMPONENTS
           and stroke_length >= MIN_STROKE_LENGTH
 ```
-Confidence scales `ink_ratio` between `CONF_LOW` and `CONF_HIGH`, reduced near the threshold. Borderline cells are flagged uncertain — being willing to say so is a strength.
+Confidence scales `ink_ratio` between `CONF_LOW` and `CONF_HIGH`, reduced near the threshold. Borderline cells are flagged uncertain, being willing to say so is a strength.
 - `feat(detect): add ink ratio threshold decision`
 - `feat(detect): require minimum components and stroke length`
 - `feat(detect): compute confidence score from ink ratio`
 - `feat(detect): flag borderline cells as uncertain`
 
-**T5 — Tune against ground truth.** Verify `data/ground_truth.csv` against the images, then sweep `INK_RATIO_THRESHOLD` and pick the best accuracy. **Show the sweep curve.** Report accuracy including and excluding the two ink-but-absent cells.
+**T5: Tune against ground truth.** Verify `data/ground_truth.csv` against the images, then sweep `INK_RATIO_THRESHOLD` and pick the best accuracy. **Show the sweep curve.** Report accuracy including and excluding the two ink-but-absent cells.
 - `chore(data): verify hand labelled ground truth against the sheets`
 - `feat(detect): add threshold sweep tool over ground truth`
 - `fix(detect): set ink ratio threshold from sweep results`
 
-**T6 — Wrap as a Stage and persist.** Decide → build records → upsert students, sheet, attendance and signatures in one transaction.
+**T6: Wrap as a Stage and persist.** Decide → build records → upsert students, sheet, attendance and signatures in one transaction.
 - `feat(detect): wrap decision logic in DecisionStage class`
 - `feat(db): persist attendance and signature records per sheet`
 - `fix(db): make re-processing a sheet update instead of duplicating rows`
 
 **Verify:** all five sheets processed, 30 attendance rows and no duplicates on a second run; `sams.py` summary shows 6 students with the counts matching `ground_truth.csv`.
 
-**Figures:** `m7_threshold_sweep.png`, `m7_ink_ratio_distribution.png` (**overlapping present/absent histograms with the threshold line — your main figure**), `m7_confusion_matrix.png`, `m7_accuracy_per_sheet.png`, `m7_er_diagram.png`
+**Figures:** `m7_threshold_sweep.png`, `m7_ink_ratio_distribution.png` (**overlapping present/absent histograms with the threshold line, your main figure**), `m7_confusion_matrix.png`, `m7_accuracy_per_sheet.png`, `m7_er_diagram.png`
 
 ---
 
-## 9.8 M8 — Signature Recognition
+## 9.8 M8: Signature Recognition
 
 **Branch** `feat/m8-recognition` · **Owns** `src/recognise/preprocess_sig.py`, `src/recognise/features.py`, `src/recognise/matcher.py`, `src/recognise/report.py`, `tools/eval_recognition.py`, `tests/test_recognition.py`
 **Reads** M7's `signatures` table and M6's saved crops · **Drives** `investigate.py`
 
-The only part of the brief that explicitly promises higher grades: *"An attempt to distinguish the student signatures using any advanced library or self-created would result higher grades."* Treat it as the group's showcase. You are off the critical path, so you can work steadily — build against your own hand-cropped samples until M6 and M7 land.
+The only part of the brief that explicitly promises higher grades: *"An attempt to distinguish the student signatures using any advanced library or self-created would result higher grades."* Treat it as the group's showcase. You are off the critical path, so you can work steadily, build against your own hand-cropped samples until M6 and M7 land.
 
 ### The problem you must solve first
 
@@ -1284,10 +1284,10 @@ Two score distributions, a cut-off where they separate, and real numbers: False 
 
 ### What T0 measured that changes your job
 
-- **Six students, five sheets, and not everyone signed every sheet.** Counted from `data/ground_truth.csv`: two students have 5 samples, three have 4, one has 3 — **41 genuine pairs in total**. That is a small experiment. State the number in the report and do not present the EER as though it came from thousands of pairs.
-- **`investigate.py` calls `matcher.investigate(index: str, save_only: bool) -> None`** — §6.5. Your brief shows `investigate(student_index, db)`; the CLI does not build a `Database`, so construct your own inside. Keep the brief's `InvestigationReport` if you like, but the entry point signature is fixed.
+- **Six students, five sheets, and not everyone signed every sheet.** Counted from `data/ground_truth.csv`: two students have 5 samples, three have 4, one has 3, **41 genuine pairs in total**. That is a small experiment. State the number in the report and do not present the EER as though it came from thousands of pairs.
+- **`investigate.py` calls `matcher.investigate(index: str, save_only: bool) -> None`**, §6.5. Your brief shows `investigate(student_index, db)`; the CLI does not build a `Database`, so construct your own inside. Keep the brief's `InvestigationReport` if you like, but the entry point signature is fixed.
 - **Crops are at `outputs/cells/<sheet_date>/<index>.png`** with `<index>_mask.png` beside them (§9.6 T6). `investigate.py` counts those files to decide whether there is anything to compare, and stops cleanly with exit 0 when there are fewer than two.
-- **One student's signature genuinely varies a lot** — compare `10009306` across `31.05` and `12.07` by eye before you tune anything. If your threshold flags real variation as a mismatch, that is a finding, not a bug to hide.
+- **One student's signature genuinely varies a lot**, compare `10009306` across `31.05` and `12.07` by eye before you tune anything. If your threshold flags real variation as a mismatch, that is a finding, not a bug to hide.
 
 ### Contract
 
@@ -1332,16 +1332,16 @@ USE_CNN_FEATURES = False
 
 ### Tasks
 
-**T1 — Collect samples.** `Database.get_signatures(index)`, skipping absences. Fewer than 2 → clear message, no crash.
+**T1: Collect samples.** `Database.get_signatures(index)`, skipping absences. Fewer than 2 → clear message, no crash.
 - `feat(recognise): load signature samples for a student from the database`
 - `fix(recognise): handle students with fewer than two samples`
 
-**T2 — Normalisation.** Nothing works without it: trim to ink → keep aspect → pad → centre by centre of mass → resize to `SIG_NORM_SIZE`. Use M4's `clean_signature_crop` rather than writing your own morphology.
+**T2: Normalisation.** Nothing works without it: trim to ink → keep aspect → pad → centre by centre of mass → resize to `SIG_NORM_SIZE`. Use M4's `clean_signature_crop` rather than writing your own morphology.
 - `feat(recognise): trim signature masks to the ink bounding box`
 - `feat(recognise): centre signatures by centre of mass`
 - `feat(recognise): resize to fixed box keeping aspect ratio`
 
-**T3 — The five features.** SSIM (`skimage.metrics`), HOG + cosine (`skimage.feature`), Hu moments log-scaled (`cv2.HuMoments`), ORB + Lowe ratio test, and `shape_stats` — **your own, in plain NumPy**.
+**T3: The five features.** SSIM (`skimage.metrics`), HOG + cosine (`skimage.feature`), Hu moments log-scaled (`cv2.HuMoments`), ORB + Lowe ratio test, and `shape_stats`, **your own, in plain NumPy**.
 - `feat(recognise): add ssim similarity between normalised signatures`
 - `feat(recognise): add hog descriptor with cosine similarity`
 - `feat(recognise): add hu moment shape comparison`
@@ -1350,24 +1350,24 @@ USE_CNN_FEATURES = False
 - `feat(recognise): add projection profile correlation to custom score`
 - `refactor(recognise): normalise all scores to a zero to one range`
 
-**T4 — Combine.** Weighted sum from `SCORE_WEIGHTS`; above `MATCH_THRESHOLD` is a match, below by more than `UNCERTAIN_BAND` is a mismatch, between is uncertain.
+**T4: Combine.** Weighted sum from `SCORE_WEIGHTS`; above `MATCH_THRESHOLD` is a match, below by more than `UNCERTAIN_BAND` is a mismatch, between is uncertain.
 - `feat(recognise): combine individual scores into one weighted score`
 - `feat(recognise): add match, mismatch and uncertain verdicts`
 
-**T5 — Genuine vs impostor (the bonus marks).** `tools/eval_recognition.py`: build both pair sets, plot both distributions on one axis, sweep the threshold, compute FAR/FRR, find the EER, set `MATCH_THRESHOLD` from it, and report which single feature separates best — that justifies your weights.
+**T5: Genuine vs impostor (the bonus marks).** `tools/eval_recognition.py`: build both pair sets, plot both distributions on one axis, sweep the threshold, compute FAR/FRR, find the EER, set `MATCH_THRESHOLD` from it, and report which single feature separates best; that justifies your weights.
 - `feat(eval): build genuine and impostor score pairs from all students`
 - `feat(eval): plot score distributions for both pair types`
 - `feat(eval): compute far, frr and equal error rate across thresholds`
 - `fix(recognise): set match threshold from measured equal error rate`
 - `docs(recognise): record which features separate genuine pairs best`
 
-**T6 — Outlier inside one student.** Pairwise similarity matrix, mean similarity per sample, flag the lowest with its sheet date.
+**T6: Outlier inside one student.** Pairwise similarity matrix, mean similarity per sample, flag the lowest with its sheet date.
 - `feat(recognise): build pairwise similarity matrix per student`
 - `feat(recognise): flag the sample least similar to the rest`
 
-**T7 — Output.** `python investigate.py 10000409` prints a pairwise table and a verdict:
+**T7: Output.** `python investigate.py 10000409` prints a pairwise table and a verdict:
 ```
-Student 10000409 — M S Dilshanika Perera — 5 samples
+Student 10000409: M S Dilshanika Perera, 5 samples
 
   pair                      SSIM   HOG    HU     ORB    OWN    COMBINED
   31.05 vs 21.06            0.81   0.88   0.92   0.79   0.84     0.84  match
@@ -1381,29 +1381,29 @@ Figures saved to outputs/figures/m8_investigate_10000409.png
 - `feat(recognise): print pairwise score table for investigate command`
 - `feat(recognise): print final verdict with the flagged sheet date`
 
-**T8 — Optional tier 3, only after T1–T7 work.** Pretrained ResNet18 embedding behind `USE_CNN_FEATURES`. **No training, and no Siamese network** — not enough data, not enough time. If it is slow or unhelpful, switch it off and report that honestly. A measured negative result still earns marks.
+**T8: Optional tier 3, only after T1–T7 work.** Pretrained ResNet18 embedding behind `USE_CNN_FEATURES`. **No training, and no Siamese network**, not enough data, not enough time. If it is slow or unhelpful, switch it off and report that honestly. A measured negative result still earns marks.
 - `feat(recognise): add optional pretrained cnn embedding features`
 - `docs(recognise): report cnn embedding results and runtime cost`
 
-**Verify:** `python investigate.py 10000409` prints a table and a verdict for all 10 of its pairs; `compare(x, x)` scores near 1.0. Every student in this data has at least 3 samples, so the fewer-than-two path has no real case here — cover it with a unit test, not by hoping.
+**Verify:** `python investigate.py 10000409` prints a table and a verdict for all 10 of its pairs; `compare(x, x)` scores near 1.0. Every student in this data has at least 3 samples, so the fewer-than-two path has no real case here, cover it with a unit test, not by hoping.
 
-**Figures:** `m8_normalisation_steps.png`, `m8_score_distributions.png` (**genuine vs impostor with the threshold line — your headline figure**), `m8_far_frr_curve.png`, `m8_similarity_matrix.png`, `m8_orb_matches.png`, `m8_feature_comparison.png`, `m8_flagged_example.png`
+**Figures:** `m8_normalisation_steps.png`, `m8_score_distributions.png` (**genuine vs impostor with the threshold line, your headline figure**), `m8_far_frr_curve.png`, `m8_similarity_matrix.png`, `m8_orb_matches.png`, `m8_feature_comparison.png`, `m8_flagged_example.png`
 
 ---
 
-## 9.9 M9 — Visualisation & QA
+## 9.9 M9: Visualisation & QA
 
 **Branch** `feat/m9-viz-qa` · **Owns** `src/viz/charts.py`, `src/viz/style.py`, `tools/run_all_sheets.py`, `tools/make_report_assets.py`, `tests/test_charts.py`, `tests/test_e2e.py`
 **Reads** M7's database · **Drives** `infovis.py` · **Also** the group's QA
 
-Data visualisation is one of the module's **two named key technologies**. This module is judged on more than "it drew a bar chart". `src/viz/progress.py` is M1's — do not touch it.
+Data visualisation is one of the module's **two named key technologies**. This module is judged on more than "it drew a bar chart". `src/viz/progress.py` is M1's, do not touch it.
 
 ### What T0 measured that changes your job
 
 - **6 students × 5 sheets = 30 cells.** Your heat map is 6 rows by 5 columns. That is small, which is a gift: every cell can carry a label, and the whole class fits on one readable figure. Design for that rather than for a 200-student grid.
 - **Dates must sort chronologically, not as strings.** `05.07.2019` sorts before `21.06.2019` alphabetically and after it in reality. Parse `DD.MM.YYYY` before sorting, everywhere.
-- **Attendance is high** — most students are present on most sheets. A histogram of attendance percentage will be a spike near 100%. Say so, and choose charts that still communicate: the timeline and the heat map carry the story here, the distribution histogram does not. Choosing the right chart *and explaining why* is the marked skill.
-- **`infovis.py` calls `charts.show_student(index, save_only)` and `charts.show_all(save_only)`** — §6.5, module-level functions. Your brief describes an `AttendanceCharts` class; keep it, and have the two functions wrap it.
+- **Attendance is high**: most students are present on most sheets. A histogram of attendance percentage will be a spike near 100%. Say so, and choose charts that still communicate: the timeline and the heat map carry the story here, the distribution histogram does not. Choosing the right chart *and explaining why* is the marked skill.
+- **`infovis.py` calls `charts.show_student(index, save_only)` and `charts.show_all(save_only)`**, §6.5, module-level functions. Your brief describes an `AttendanceCharts` class; keep it, and have the two functions wrap it.
 - **`data/ground_truth.csv` already exists** with 30 labelled rows and a `note` column. Your accuracy report reads it directly.
 
 ### Contract
@@ -1428,7 +1428,7 @@ def show_student(index: str, save_only: bool = False) -> None: ...   # §6.5
 def show_all(save_only: bool = False) -> None: ...                   # §6.5
 ```
 
-`save_only=True` writes to `outputs/charts/` and opens no window — needed so the whole prototype can run headless and in tests.
+`save_only=True` writes to `outputs/charts/` and opens no window, needed so the whole prototype can run headless and in tests.
 
 `src/config.py` under `# --- M9 visualisation ---`:
 
@@ -1440,48 +1440,48 @@ CHART_FIGSIZE = (11, 7)
 
 ### Tasks
 
-**T1 — House style first.** Consistent fonts, a colour-blind-safe palette, no chartjunk, no 3-D. Every chart in the project uses it; that consistency is itself worth marks. Red/green alone fails colour-blind readers — add shape or position as a second cue and say so.
+**T1: House style first.** Consistent fonts, a colour-blind-safe palette, no chartjunk, no 3-D. Every chart in the project uses it; that consistency is itself worth marks. Red/green alone fails colour-blind readers, add shape or position as a second cue and say so.
 - `feat(viz): add shared chart style and colour palette`
 - `docs(viz): note colour choices and accessibility reasoning`
 
-**T2 — Student timeline.** Dates in chronological order on x, present/absent on y, step line with coloured markers, student name and index in the title.
+**T2: Student timeline.** Dates in chronological order on x, present/absent on y, step line with coloured markers, student name and index in the title.
 - `feat(viz): add per student attendance timeline chart`
 - `fix(viz): sort sheet dates chronologically not alphabetically`
 
-**T3 — Student summary.** Attendance percentage as a donut with `4 / 5` printed in the centre, **plus the class average for context**. A number without a comparison is not a visualisation.
+**T3: Student summary.** Attendance percentage as a donut with `4 / 5` printed in the centre, **plus the class average for context**. A number without a comparison is not a visualisation.
 - `feat(viz): add attendance percentage donut chart`
 - `feat(viz): add class average reference to the summary chart`
 
-**T4 — The dashboard.** What `infovis.py 10000409` shows: `GridSpec`, four panels — timeline, donut, this student against the class, and a small table of date / present / confidence.
+**T4: The dashboard.** What `infovis.py 10000409` shows: `GridSpec`, four panels, timeline, donut, this student against the class, and a small table of date / present / confidence.
 - `feat(viz): add multi panel student dashboard with gridspec`
 - `feat(viz): add attendance details table panel`
 - `fix(viz): tighten layout so panels do not overlap`
 
-**T5 — Class-wide charts.** Heat map (6 students × 5 dates, cells labelled), present count per sheet, attendance distribution. **The heat map is the most useful chart a lecturer gets — make it the best one.**
+**T5: Class-wide charts.** Heat map (6 students × 5 dates, cells labelled), present count per sheet, attendance distribution. **The heat map is the most useful chart a lecturer gets, make it the best one.**
 - `feat(viz): add class attendance heatmap`
 - `feat(viz): add present count per sheet bar chart`
 - `feat(viz): add attendance percentage distribution histogram`
 
-**T6 — Wire up `infovis.py` with M1.** Implement `show_student` and `show_all` to the §6.5 signatures. M1's CLI already handles argument parsing, the unknown-index message and the empty-database message — do not duplicate them.
+**T6: Wire up `infovis.py` with M1.** Implement `show_student` and `show_all` to the §6.5 signatures. M1's CLI already handles argument parsing, the unknown-index message and the empty-database message, do not duplicate them.
 - `feat(viz): add show_student and show_all entry points for the cli`
 - `feat(viz): honour save-only by writing charts without opening a window`
 
-**T7 — End-to-end runner (QA).** `tools/run_all_sheets.py`: wipe the DB, run all five sheets, catch and report failures, print rows detected / students matched / time per sheet. **Run it after every merge into `main` and tell the group the same hour when it breaks.**
+**T7: End-to-end runner (QA).** `tools/run_all_sheets.py`: wipe the DB, run all five sheets, catch and report failures, print rows detected / students matched / time per sheet. **Run it after every merge into `main` and tell the group the same hour when it breaks.**
 - `feat(qa): add end to end runner for all five sheets`
 - `feat(qa): report per sheet timing and detected row counts`
 - `fix(qa): reset database before each full run`
 
-**T8 — Accuracy against ground truth, with M7.** Overall, per sheet, and **a list of every mistake with its student index and sheet date** so the group can open those exact cells. The two ink-but-absent cells will be in that list — name them.
+**T8: Accuracy against ground truth, with M7.** Overall, per sheet, and **a list of every mistake with its student index and sheet date** so the group can open those exact cells. The two ink-but-absent cells will be in that list, name them.
 - `feat(qa): compute accuracy against ground truth per sheet`
 - `feat(qa): list individual misclassified cells for review`
 
-**T9 — Report asset generator (last).** `tools/make_report_assets.py` regenerates **every** figure in `outputs/` in one command, so a late parameter change does not mean re-taking screenshots by hand.
+**T9: Report asset generator (last).** `tools/make_report_assets.py` regenerates **every** figure in `outputs/` in one command, so a late parameter change does not mean re-taking screenshots by hand.
 - `feat(report): add single command to regenerate all report figures`
 - `docs(report): list every generated figure and its report section`
 
 **Verify:** `python infovis.py 10000409` shows and saves the dashboard; `python infovis.py --all` draws the class charts; `python tools/run_all_sheets.py` passes on all five sheets.
 
-**Figures:** `m9_dashboard_example.png`, `m9_class_heatmap.png`, `m9_attendance_distribution.png`, `m9_accuracy_report.png`, `m9_chart_type_choice.png` (**the same data as a pie, a bar and a timeline, showing why you chose what you chose — worth real marks in a visualisation module**)
+**Figures:** `m9_dashboard_example.png`, `m9_class_heatmap.png`, `m9_attendance_distribution.png`, `m9_accuracy_report.png`, `m9_chart_type_choice.png` (**the same data as a pie, a bar and a timeline, showing why you chose what you chose, worth real marks in a visualisation module**)
 
 ---
 
@@ -1496,76 +1496,76 @@ CHART_FIGSIZE = (11, 7)
 
 ## 11. Tests each module must write
 
-*"Testing results"* is named in the marking criteria, so this is not optional. Every test file starts with `matplotlib.use("Agg")` before any pyplot import — the suite must never try to open a window. Prefer small synthetic images over the real sheets: a test that needs a 3024 x 4032 photo is slow and tells you less.
+*"Testing results"* is named in the marking criteria, so this is not optional. Every test file starts with `matplotlib.use("Agg")` before any pyplot import; the suite must never try to open a window. Prefer small synthetic images over the real sheets: a test that needs a 3024 x 4032 photo is slow and tells you less.
 
-**M1 — `tests/test_pipeline.py`**
-1. Two fake stages append to a list — `Pipeline` runs them in the given order.
+**M1: `tests/test_pipeline.py`**
+1. Two fake stages append to a list, `Pipeline` runs them in the given order.
 2. A stage that raises → the error message contains that stage's `name`.
 3. `ProgressViewer.save_all()` into `tmp_path` writes exactly N files, numbered from 01.
 4. `ProgressViewer.add()` accepts both a 3-channel and a 1-channel image.
 5. `sams.py` with a missing image exits with code 2 (use `subprocess`).
-6. `Student("007", "x").index == "007"` — leading zero survives.
+6. `Student("007", "x").index == "007"`, leading zero survives.
 
-**M2 — `tests/test_geometry.py`**
+**M2: `tests/test_geometry.py`**
 1. `load_image` raises `FileNotFoundError` on a bad path, `ValueError` on a non-image.
 2. A synthetic white rectangle on a dark background, rotated 7°, is corrected to within 1°.
 3. `four_point_warp` on a known quad gives the expected output size.
 4. Corner ordering returns top-left first for shuffled input points.
 5. The fallback path triggers on pure noise and does not crash.
 
-**M3 — `tests/test_enhance.py`**
+**M3: `tests/test_enhance.py`**
 1. `to_grey` output is 2-D `uint8`, same height and width as the input.
 2. Luminosity of a pure red pixel `(0, 0, 255)` BGR is ≈ 76.
 3. `denoise` reduces variance on a synthetic noisy flat patch.
 4. `remove_shadow` on a linear brightness ramp reduces the left-half / right-half difference.
 5. An unknown method name raises `ValueError`.
 
-**M4 — `tests/test_binarize.py`**
+**M4: `tests/test_binarize.py`**
 1. Output is strictly two-valued: `set(np.unique(out)) <= {0, 255}`.
-2. **Ink is 255** — a dark stroke on white paper comes out white.
+2. **Ink is 255**: a dark stroke on white paper comes out white.
 3. Hand-written Otsu on a clean two-peak image lands between the peaks and matches OpenCV within ±1.
 4. Opening removes isolated single pixels; closing fills a 1-pixel gap in a line.
 5. An even `block` value is corrected or raises a clear `ValueError`.
 
-**M5 — `tests/test_table.py`**
+**M5: `tests/test_table.py`**
 1. A synthetic drawn grid: the detector finds exactly the lines that were drawn.
 2. With one horizontal line erased, grid repair restores it at the right position.
 3. `Grid.cell_bbox(0, 4)` returns the expected box for a known grid.
 4. Lines 3 px apart merge into one; lines 40 px apart do not.
-5. **Two stacked synthetic tables — the selector returns the taller lower one**, not the header.
+5. **Two stacked synthetic tables; the selector returns the taller lower one**, not the header.
 6. `crop_cell` output is smaller than the raw bbox by `2 * CELL_INSET` horizontally.
 
-**M6 — `tests/test_ink.py`**
+**M6: `tests/test_ink.py`**
 1. A synthetic white cell with a blue stroke: the mask covers it, `ink_ratio > 0`.
 2. A blank white cell: `ink_ratio` near zero, `components == 0`.
-3. A **black** stroke is detected — the low-saturation branch works.
-4. A **red** stroke is detected — hue wrap-around at 0/180 is handled.
+3. A **black** stroke is detected; the low-saturation branch works.
+4. A **red** stroke is detected, hue wrap-around at 0/180 is handled.
 5. A **green** stroke is detected (no green pen exists in the real data, so this test is the only proof).
 6. A 4-pixel speck is removed by `MIN_BLOB_AREA`; a 200-pixel stroke is kept.
 7. `dominant_pen_colour` returns `"blue"` for a pure blue stroke.
 
-**M7 — `tests/test_decision.py` and `tests/test_db.py`**
+**M7: `tests/test_decision.py` and `tests/test_db.py`**
 1. `decide` returns `True` for a high ink ratio, `False` for near zero.
 2. A value just below the threshold returns `False` with low confidence.
-3. Many tiny components with low stroke length is rejected — a smudge is not a signature.
+3. Many tiny components with low stroke length is rejected; a smudge is not a signature.
 4. `init_schema` on a temp file creates all four tables.
 5. Saving the same sheet twice does not duplicate attendance rows.
 6. `get_attendance(index)` returns rows in **date** order, not string order.
-7. A SQL injection attempt in a student index changes nothing — proves parameterised queries.
+7. A SQL injection attempt in a student index changes nothing, proves parameterised queries.
 8. `parse_students` keeps `"10000409"` as a string, and finds all six students via `.//student`.
 
-**M8 — `tests/test_recognition.py`**
+**M8: `tests/test_recognition.py`**
 1. `compare(x, x)` gives a combined score near 1.0.
 2. A signature against a blank image scores low.
-3. The same signature shifted 10 px still scores high — centring works.
-4. The same signature scaled 1.5× still scores high — scale normalisation works.
+3. The same signature shifted 10 px still scores high; centring works.
+4. The same signature scaled 1.5× still scores high; scale normalisation works.
 5. `normalise_signature` always returns exactly `SIG_NORM_SIZE`.
 6. A student with 1 sample returns a clear "not enough samples" result, no exception.
 
-**M9 — `tests/test_charts.py` and `tests/test_e2e.py`**
+**M9: `tests/test_charts.py` and `tests/test_e2e.py`**
 1. Each chart function returns a `matplotlib.figure.Figure`.
 2. A student with no records produces an empty-state chart, not a crash.
-3. Dates are ordered chronologically — assert `05.07.2019` comes **after** `21.06.2019`.
+3. Dates are ordered chronologically, assert `05.07.2019` comes **after** `21.06.2019`.
 4. `save()` writes a file of non-zero size.
 5. The full pipeline on one sheet writes the expected number of attendance rows.
 6. Running the same sheet twice leaves the row count unchanged.
@@ -1576,10 +1576,10 @@ Run the whole suite from the repository root with `pytest -q`. It must pass on `
 
 ## 12. Commit protocol
 
-- Branch: `feat/m<N>-<area>` — `feat/m1-core`, `feat/m2-geometry`, `feat/m3-enhance`, `feat/m4-binarize`, `feat/m5-table`, `feat/m6-ink`, `feat/m7-decision-db`, `feat/m8-recognition`, `feat/m9-viz-qa`.
-- Merge into `main` via PR with a **merge commit or rebase — never squash.** Squashing collapses your fifteen commits into one and erases the evidence of your individual contribution.
+- Branch: `feat/m<N>-<area>`, `feat/m1-core`, `feat/m2-geometry`, `feat/m3-enhance`, `feat/m4-binarize`, `feat/m5-table`, `feat/m6-ink`, `feat/m7-decision-db`, `feat/m8-recognition`, `feat/m9-viz-qa`.
+- Merge into `main` via PR with a **merge commit or rebase, never squash.** Squashing collapses your fifteen commits into one and erases the evidence of your individual contribution.
 - Message format: `type(scope): short lowercase summary`, types `feat | fix | refactor | test | docs | chore`.
-- One logical change per commit. **Minimum 15 commits each, 20 for M1.** Push after each task, not in one batch at the end — a single dump on the last night is visible in the log and is worth close to nothing.
+- One logical change per commit. **Minimum 15 commits each, 20 for M1.** Push after each task, not in one batch at the end, a single dump on the last night is visible in the log and is worth close to nothing.
 - Author identity must be your own, set **before your first commit**:
   ```fish
   git config user.name "Your Full Name"
@@ -1599,7 +1599,7 @@ Run the whole suite from the repository root with `pytest -q`. It must pass on `
 - [ ] `pytest -q` passes from the repository root
 - [ ] Your figures are in `outputs/figures/m<N>_*.png` at 150 dpi or better
 - [ ] 15+ commits on your branch with clear messages
-- [ ] `docs/contrib_m<N>.md` drafted — two pages, per the coursework brief
+- [ ] `docs/contrib_m<N>.md` drafted, two pages, per the coursework brief
 
 **Plus, per module:**
 
@@ -1628,7 +1628,7 @@ Run the whole suite from the repository root with `pytest -q`. It must pass on `
 
 ## 14. Integration order and hand-offs
 
-Who unblocks whom. Nobody waits for a module that is not directly above them — stubs and fixtures cover the gap (§8).
+Who unblocks whom. Nobody waits for a module that is not directly above them, stubs and fixtures cover the gap (§8).
 
 ```
 M1 skeleton + contracts + fixtures     ← everybody waits on this, and only this
@@ -1655,14 +1655,14 @@ M1 skeleton + contracts + fixtures     ← everybody waits on this, and only thi
 | `charts.show_student` / `show_all` | M9 | M1 | §6.5 signatures exactly |
 | `matcher.investigate` | M8 | M1 | §6.5 signature exactly |
 
-**Integration is M1's job, one module at a time.** As each lands: delete its stub from `src/stubs.py`, swap the line in `STAGES`, run `sams.py` on all five sheets, commit `refactor(pipeline): replace <stage> stub with real implementation`. Never swap two at once — when it breaks you will not know which one did it.
+**Integration is M1's job, one module at a time.** As each lands: delete its stub from `src/stubs.py`, swap the line in `STAGES`, run `sams.py` on all five sheets, commit `refactor(pipeline): replace <stage> stub with real implementation`. Never swap two at once; when it breaks you will not know which one did it.
 
 ### The three decisions the group has to make together
 
 Each has an owner and a deadline of *before that module is merged*.
 
-1. **Overflowing signatures — M5 and M6 agree the approach.** §4 deviation 6. A signature that spills into the row below belongs to the row it *starts* in. Proposal: M5 crops with a small vertical pad, M6 attributes each connected component to the row holding most of its pixels. Whoever writes it first tells the other.
-2. **Ink that is not a signature — M6 supplies, M7 decides. Measured, see below.** §4 deviation 7. `ab` and a stray tick are both ink and both mean absent. M6's features now all reach M7 on `InkResult`, and the separation has been measured across all 30 cells:
+1. **Overflowing signatures: M5 and M6 agree the approach.** §4 deviation 6. A signature that spills into the row below belongs to the row it *starts* in. Proposal: M5 crops with a small vertical pad, M6 attributes each connected component to the row holding most of its pixels. Whoever writes it first tells the other.
+2. **Ink that is not a signature, M6 supplies, M7 decides. Measured, see below.** §4 deviation 7. `ab` and a stray tick are both ink and both mean absent. M6's features now all reach M7 on `InkResult`, and the separation has been measured across all 30 cells:
 
    | | n | ink_ratio | filled_ratio | centroid_offset | aspect |
    |---|---|---|---|---|---|
@@ -1672,9 +1672,9 @@ Each has an owner and a deadline of *before that module is merged*.
 
    The two awkward cells are `21.06.2019 / 10009306` (the lecturer's `ab`, `filled_ratio` 0.740) and `05.07.2019 / 10009303` (a stray red tick, 0.765).
 
-   **No single feature separates them.** The best is `filled_ratio`, and rejecting above the lower awkward value still loses 2 of the 25 genuine signatures. `ink_ratio` loses 7 — the `ab` has a *higher* ink ratio than any real signature on any sheet.
+   **No single feature separates them.** The best is `filled_ratio`, and rejecting above the lower awkward value still loses 2 of the 25 genuine signatures. `ink_ratio` loses 7, the `ab` has a *higher* ink ratio than any real signature on any sheet.
 
    One pair does separate cleanly: `filled_ratio >= 0.74 AND stroke_length >= 192` rejects both and keeps all 25. **Treat that as a measurement, not an answer.** It is fitted to two positive examples and its thresholds sit exactly on their values, so it is memorisation rather than a rule. M7 decides whether to use it with that caveat stated, or to report the two cells as a known limitation. Either is defensible in the report; presenting the pair as a validated rule is not.
-3. **The confidence band — M7 with M1.** `config.UNCERTAIN_BELOW` decides what the summary calls uncertain. M7 sets it from the threshold sweep, not by feel.
+3. **The confidence band: M7 with M1.** `config.UNCERTAIN_BELOW` decides what the summary calls uncertain. M7 sets it from the threshold sweep, not by feel.
 
 ---

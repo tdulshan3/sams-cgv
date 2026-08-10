@@ -4,14 +4,14 @@
 The charts and the signature comparison both read from the database, and the
 database is not filled until the whole image pipeline runs. Rather than have
 two people wait for that, this writes a plausible fake dataset with the real
-schema, the real six students and the real five sheet dates::
+schema, the real six students and the real five sheet dates:
 
     python tools/seed_db.py                  # fake rows into data/attendance.db
     python tools/seed_db.py --db /tmp/x.db   # somewhere else
     python tools/seed_db.py --clear          # wipe the fake rows again
 
 Temporary scaffolding, exactly like ``tools/make_fixtures.py``. The numbers are
-invented — no image was looked at — so nothing here may end up in the report.
+invented: no image was looked at, so nothing here may end up in the report.
 Once ``sams.py`` runs all five sheets for real, run with ``--clear`` and let the
 pipeline write the truth.
 """
@@ -40,7 +40,7 @@ FALLBACK_STUDENTS = [
     Student("10009304", "K L Udara Maduranga Liyanage"),
     Student("10009306", "Hansa Anuradha Wickramanayake"),
 ]
-"""Used when ``info.xml`` cannot be read — the seeder must never be the reason
+"""Used when ``info.xml`` cannot be read; the seeder must never be the reason
 somebody is blocked."""
 
 SHEET_DATES = ["31.05.2019", "21.06.2019", "28.06.2019", "05.07.2019", "12.07.2019"]
@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rows = seed(db)
     print(f"seeded {rows} fake attendance rows into {db.path}")
-    print("this is invented data — run tools/seed_db.py --clear before the real run")
+    print("this is invented data, run tools/seed_db.py --clear before the real run")
     return 0
 
 

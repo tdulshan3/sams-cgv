@@ -1,11 +1,11 @@
 """Generate the five M3 report figures into ``outputs/figures/``.
 
 Run once M2's real geometry stage is in place, since these figures compare
-enhancement methods on an actual warped sheet rather than a fixture crop::
+enhancement methods on an actual warped sheet rather than a fixture crop:
 
     python tools/make_m3_figures.py
 
-Written by M3 for BUILD_SPEC.md section 9.3. Not imported by ``src/`` — a
+Written by M3 for BUILD_SPEC.md section 9.3. Not imported by ``src/``, a
 report-asset script, not part of the pipeline.
 """
 
@@ -51,7 +51,7 @@ def _warped(sheet_name: str) -> np.ndarray:
     """A flattened sheet to build figures from.
 
     Uses the same crude fractional crop as ``tools/make_fixtures.py`` rather
-    than the real ``GeometryStage`` — at the time this was written M2's
+    than the real ``GeometryStage``; at the time this was written M2's
     corner detection was returning near-empty crops on this machine, which
     would have made every M3 figure a blank rectangle. Swap this back to
     ``GeometryStage`` once that is confirmed fixed.
@@ -89,7 +89,7 @@ def make_greyscale_methods_figure(bgr: np.ndarray) -> None:
         ax.imshow(to_grey(bgr, method), cmap="gray", vmin=0, vmax=255)
         ax.set_title(method)
         ax.axis("off")
-    fig.suptitle("M3 — greyscale conversion methods")
+    fig.suptitle("M3, greyscale conversion methods")
     _save(fig, "m3_greyscale_methods.png")
 
 
@@ -100,7 +100,7 @@ def make_histograms_figure(grey: np.ndarray) -> None:
     ax.hist(equalised.ravel(), bins=256, range=(0, 255), alpha=0.6, label="after CLAHE")
     ax.set_xlabel("pixel intensity")
     ax.set_ylabel("pixel count")
-    ax.set_title("M3 — histogram before and after CLAHE")
+    ax.set_title("M3, histogram before and after CLAHE")
     ax.legend()
     _save(fig, "m3_histograms.png")
 
@@ -121,7 +121,7 @@ def make_denoise_comparison_figure(grey: np.ndarray) -> tuple[list[str], list[fl
         axes[1, col].imshow(crop, cmap="gray", vmin=0, vmax=255)
         axes[1, col].set_title(f"{method} (zoom)")
         axes[1, col].axis("off")
-    fig.suptitle("M3 — denoise comparison, full image and zoomed crop")
+    fig.suptitle("M3, denoise comparison, full image and zoomed crop")
     _save(fig, "m3_denoise_comparison.png")
 
     methods, psnrs, times = [], [], []
@@ -151,7 +151,7 @@ def make_denoise_metrics_figure(methods: list[str], psnrs: list[float], times: l
     ax_time.bar(methods, times, color="tab:orange")
     ax_time.set_ylabel("seconds")
     ax_time.set_title("Denoise runtime")
-    fig.suptitle("M3 — denoise metrics per method")
+    fig.suptitle("M3, denoise metrics per method")
     _save(fig, "m3_denoise_metrics.png")
 
 
@@ -166,7 +166,7 @@ def make_shadow_removal_figure(grey: np.ndarray) -> None:
         ax.imshow(image, cmap="gray", vmin=0, vmax=255)
         ax.set_title(title)
         ax.axis("off")
-    fig.suptitle(f"M3 — shadow removal ({SHADOW_SHEET})")
+    fig.suptitle(f"M3, shadow removal ({SHADOW_SHEET})")
     _save(fig, "m3_shadow_removal.png")
 
 

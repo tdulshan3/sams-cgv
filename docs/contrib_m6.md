@@ -1,4 +1,4 @@
-# M6 — Ink Segmentation Contribution Notes
+# M6: Ink Segmentation Contribution Notes
 
 Module: `src/detect/`
 Branch: `feat/m6-ink`

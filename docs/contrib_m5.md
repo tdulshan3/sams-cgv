@@ -1,4 +1,4 @@
-# M5 — Table Detection Contribution Notes
+# M5: Table Detection Contribution Notes
 
 Module: `src/table/`
 Branch: `feat/m5-table`
@@ -14,7 +14,7 @@ cell crops from the colour warped image).
 
 ### Two tables on the page
 Every sheet has a one-row lecture header table above the student table, and it
-carries a signature of its own — the lecturer's. Selecting the wrong table
+carries a signature of its own, the lecturer's. Selecting the wrong table
 reports that signature as a student's, and the output still looks plausible.
 
 My first approach grouped horizontal lines into bands separated by gaps larger
@@ -24,8 +24,8 @@ between the two tables is only ~64 px, so every threshold either shatters the
 student table into single-line bands or swallows the header table with it. On
 three of five sheets it produced one row instead of six.
 
-`longest_regular_run` replaces it. A ruled table is regular by construction —
-its rows are the same height — while the lines around it are not, so the
+`longest_regular_run` replaces it. A ruled table is regular by construction,
+its rows are the same height, while the lines around it are not, so the
 student table is the longest stretch of horizontal lines whose gaps all sit
 within `ROW_SPACING_TOLERANCE` of that stretch's own median gap. That separates
 the two tables by a property they genuinely differ in rather than by a pixel
@@ -33,7 +33,7 @@ distance that happens to fall between them.
 
 One wrinkle: a printed rule thick enough to produce two projection peaks
 arrives as two positions ~9 px apart, and those near-duplicates break the run
-where they appear — on `12.07.2019` that truncated the table at four rows.
+where they appear: on `12.07.2019` that truncated the table at four rows.
 `_merge_closer_than` collapses anything closer than `MIN_ROW_HEIGHT` first,
 since no row is that short.
 
@@ -45,7 +45,7 @@ entries at both ends of `xs`, and because the signature column is addressed
 cells are still produced and every one holds a student's printed *name*.
 
 Two changes fix it. Vertical detection runs on the student band only, which
-also makes `V_KERNEL_RATIO` mean what it was supposed to — a fraction of the
+also makes `V_KERNEL_RATIO` mean what it was supposed to, a fraction of the
 table's own height, not of the whole page, which is why a 0.30 kernel had been
 eroding every column rule away. Then `_clip_to_table_width` drops any vertical
 outside the span of the row rules, since the row rules span exactly the table's
@@ -126,7 +126,7 @@ On all five sheets the grid comes out as 6 data rows × 5 columns and produces
 | 12.07.2019 | 6 | 5 | 6 | 227 × 45 |
 
 `tests/test_real_sheets.py` asserts this on every run, including a cross-check
-that the signature cell starts further right than every other column — so an
+that the signature cell starts further right than every other column, so an
 off-by-one in the grid fails the build even if the column *count* is right.
 
 ## What I learned about testing
@@ -136,9 +136,9 @@ sheet**. All 84 were synthetic. Two things hid behind them:
 
 * `cv2.HoughLinesP` returns `(N, 4)` on the OpenCV 5 we pin and `(N, 1, 4)` on
   OpenCV 4, so `lines[:, 0]` crashed on any image with enough lines to return a
-  result — which a small synthetic fixture never has. It is now wrapped once in
+  result: which a small synthetic fixture never has. It is now wrapped once in
   `src/utils/cvcompat.py`.
-* Upstream, M2's geometry was handing me mirrored 412 × 52 crops — 0.6% of the
+* Upstream, M2's geometry was handing me mirrored 412 × 52 crops, 0.6% of the
   page. I had been tuning line detection against images with no table in them.
 
 The lesson is that a synthetic fixture tests the code I wrote against the input

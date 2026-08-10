@@ -1,6 +1,6 @@
 """The verdict: was this box signed, and who does it belong to?
 
-Last stage of the pipeline. It looks at no pixels of its own — M6 has already
+Last stage of the pipeline. It looks at no pixels of its own; M6 has already
 measured every signature cell, and this module only reads those numbers, names
 the student each cell belongs to, and writes the result to the database.
 
@@ -8,9 +8,9 @@ the student each cell belongs to, and writes the result to the database.
 cells wrong, and both are known in advance (BUILD_SPEC.md §4 deviation 7): on
 ``21.06.2019`` the last cell holds the lecturer's handwritten ``ab``, and on
 ``05.07.2019`` one cell holds a stray red pen tick. Both are ink. Both mean
-*absent*. So the rule asks three things of a cell — enough coverage, at least
+*absent*. So the rule asks three things of a cell, enough coverage, at least
 one real connected component, and enough skeleton length that the pen actually
-travelled somewhere — and reports how sure it is rather than pretending a cell
+travelled somewhere: and reports how sure it is rather than pretending a cell
 sitting on the threshold is as clear-cut as an empty one.
 """
 
@@ -32,7 +32,7 @@ log = get_logger("decision")
 def decide(result: InkResult) -> tuple[bool, float]:
     """Judge one signature cell.
 
-    All four conditions must hold for a cell to count as signed::
+    All four conditions must hold for a cell to count as signed:
 
         ink_ratio     >= INK_RATIO_THRESHOLD
         ink_ratio     <= MAX_INK_RATIO
@@ -41,8 +41,8 @@ def decide(result: InkResult) -> tuple[bool, float]:
 
     Every one of those numbers comes from the sweep in
     ``tools/tune_threshold.py`` against the 30 labelled cells, and that tool
-    re-implements this rule so the two can be checked against each other —
-    ``tests/test_decision.py::test_sweep_rule_matches_decide`` fails if they
+    re-implements this rule so the two can be checked against each other,
+    ``tests/test_decision.py:test_sweep_rule_matches_decide`` fails if they
     ever drift apart.
 
     Args:
@@ -54,8 +54,8 @@ def decide(result: InkResult) -> tuple[bool, float]:
         :data:`~src.config.CONF_HIGH`, falling towards 0.5 as the cell
         approaches the threshold from either side.
 
-        A cell that clears the ink threshold but fails on shape — the ``ab``,
-        the stray tick — is called absent with confidence 0.5. That is
+        A cell that clears the ink threshold but fails on shape, the ``ab``,
+        the stray tick: is called absent with confidence 0.5. That is
         deliberate. The verdict is the right one, the evidence for it is thin,
         and saying so puts the cell in front of a human instead of burying it.
     """
@@ -83,7 +83,7 @@ def decide(result: InkResult) -> tuple[bool, float]:
 
     # A signature is a thin stroke wandering through a wide box, so it fills
     # only a fraction of its own bounding box. Ink that fills most of the box
-    # is something else — a written word, a smudge, or a neighbouring
+    # is something else: a written word, a smudge, or a neighbouring
     # signature bleeding down through the row border. The verdict is left
     # alone, because on this data the density does not decide it, but the
     # confidence is capped so the cell lands in the summary's Uncertain count
@@ -104,7 +104,7 @@ def map_rows_to_students(cells: list[Cell], students: list[Student]) -> dict[int
     What it does *not* do is assume the two lists are the same length. If M5
     found five rows where the roll has six, the sixth student simply gets no
     record and the run warns rather than quietly shifting every student up a
-    row — which would be the same kind of wrong as reading the lecturer's
+    row: which would be the same kind of wrong as reading the lecturer's
     signature as a student's.
 
     Args:
@@ -117,7 +117,7 @@ def map_rows_to_students(cells: list[Cell], students: list[Student]) -> dict[int
     rows = sorted({cell.row for cell in cells})
     if len(rows) != len(students):
         log.warning(
-            "%d rows detected but %d students in info.xml — "
+            "%d rows detected but %d students in info.xml, "
             "mapping the first %d by position, the rest have no record",
             len(rows),
             len(students),
@@ -135,7 +135,7 @@ def _rename_to_index(path_text: str | None, student_index: str) -> str | None:
     """Rename one of M6's ``row_<n>`` crops to ``<index>``, and say where it is.
 
     M6 saves each crop as ``outputs/cells/<date>/row_<n>.png`` because at that
-    point in the pipeline nothing knows the student's index — the mapping is
+    point in the pipeline nothing knows the student's index; the mapping is
     this module's job. But ``investigate.py`` finds a student's samples by
     globbing ``outputs/cells/<date>/<index>.png`` (spec §7, and the hand-off
     table in §14), so somebody has to bridge the two, and the first place with
@@ -161,7 +161,7 @@ def _rename_to_index(path_text: str | None, student_index: str) -> str | None:
 
 
 class DecisionStage(Stage):
-    """M7 — decide present or absent, then persist the whole sheet."""
+    """M7, decide present or absent, then persist the whole sheet."""
 
     name = "decision"
 
@@ -181,11 +181,11 @@ class DecisionStage(Stage):
         sheet: SheetMeta | None = ctx.get("sheet")
 
         if not ink:
-            log.warning("no ink results to decide on — no attendance recorded")
+            log.warning("no ink results to decide on, no attendance recorded")
             ctx["records"] = []
             return ctx
         if not students:
-            log.warning("no students read from info.xml — no attendance recorded")
+            log.warning("no students read from info.xml, no attendance recorded")
             ctx["records"] = []
             return ctx
 

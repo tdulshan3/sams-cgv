@@ -1,10 +1,10 @@
 """Generate the five M4 report figures into ``outputs/figures/``.
 
-Usage::
+Usage:
 
     python tools/make_m4_figures.py
 
-Written by M4 for BUILD_SPEC.md section 9.4. Not imported by ``src/`` — a
+Written by M4 for BUILD_SPEC.md section 9.4. Not imported by ``src/``, a
 report-asset script, not part of the pipeline.
 
 Like ``tools/make_m3_figures.py``, this reads the sheets through the same
@@ -69,7 +69,7 @@ effect at report size."""
 
 
 def _grey(sheet_name: str, enhanced: bool = True) -> np.ndarray:
-    """One sheet as M4 receives it — M3's full enhancement chain applied."""
+    """One sheet as M4 receives it, M3's full enhancement chain applied."""
     bgr = cv2.imread(str(config.SHEETS / sheet_name), cv2.IMREAD_COLOR)
     if bgr is None:
         raise SystemExit(f"error: could not read {config.SHEETS / sheet_name}")
@@ -112,7 +112,7 @@ def make_threshold_comparison(grey: np.ndarray) -> None:
     fig, axes = plt.subplots(2, 2, figsize=(13, 8))
     for ax, (image, title) in zip(axes.flat, panels):
         _show(ax, image, title)
-    fig.suptitle(f"M4 — thresholding methods on {SAMPLE_SHEET} (ink = white)")
+    fig.suptitle(f"M4, thresholding methods on {SAMPLE_SHEET} (ink = white)")
     _save(fig, "m4_threshold_comparison.png")
 
 
@@ -131,7 +131,7 @@ def make_otsu_histogram(grey: np.ndarray) -> None:
     ax_hist.axvline(threshold, color="tab:red", lw=2, label=f"chosen t = {threshold}")
     ax_hist.set_ylabel("pixel count")
     ax_hist.set_title(
-        "Grey histogram — the tall right peak is blank paper, "
+        "Grey histogram; the tall right peak is blank paper, "
         "the low left tail is ink",
         fontsize=10,
     )
@@ -151,13 +151,13 @@ def make_otsu_histogram(grey: np.ndarray) -> None:
     ax_var.set_xlabel("threshold t")
     ax_var.set_ylabel(r"$w_0 w_1 (m_0 - m_1)^2$")
     ax_var.set_title(
-        "Between-class variance at every candidate threshold — "
+        "Between-class variance at every candidate threshold, "
         "Otsu picks the peak",
         fontsize=10,
     )
     ax_var.set_xlim(0, 255)
 
-    fig.suptitle(f"M4 — Otsu's threshold search, computed by hand ({SAMPLE_SHEET})")
+    fig.suptitle(f"M4, Otsu's threshold search, computed by hand ({SAMPLE_SHEET})")
     _save(fig, "m4_otsu_histogram.png")
 
 
@@ -166,7 +166,7 @@ def make_global_failure() -> None:
 
     A controlled demonstration: an evenly lit sheet with a known linear
     shadow applied, so the gradient is the only variable. Otsu is included
-    deliberately — it is the *optimal* global threshold and it fails in
+    deliberately: it is the *optimal* global threshold and it fails in
     exactly the same way, which is the point.
     """
     flat = remove_shadow(_grey(GRADIENT_SHEET, enhanced=False))
@@ -184,16 +184,16 @@ def make_global_failure() -> None:
     otsu_binary, otsu_t = threshold_otsu(shadowed)
     panels = [
         (shadowed, "input: even sheet, linear shadow applied"),
-        (threshold_global(shadowed, 127), f"global t=127 — {imbalance(threshold_global(shadowed, 127))}"),
-        (otsu_binary, f"otsu t={otsu_t} (optimal, still global) — {imbalance(otsu_binary)}"),
-        (threshold_adaptive(shadowed), f"adaptive — {imbalance(threshold_adaptive(shadowed))}"),
+        (threshold_global(shadowed, 127), f"global t=127, {imbalance(threshold_global(shadowed, 127))}"),
+        (otsu_binary, f"otsu t={otsu_t} (optimal, still global), {imbalance(otsu_binary)}"),
+        (threshold_adaptive(shadowed), f"adaptive, {imbalance(threshold_adaptive(shadowed))}"),
     ]
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8))
     for ax, (image, title) in zip(axes.flat, panels):
         _show(ax, image, title)
     fig.suptitle(
-        "M4 — why a single global threshold fails on uneven lighting\n"
+        "M4, why a single global threshold fails on uneven lighting\n"
         "Otsu is the best possible *global* cut and it fails identically; "
         "only a local threshold survives",
         fontsize=11,
@@ -202,7 +202,7 @@ def make_global_failure() -> None:
 
 
 def make_morphology(grey: np.ndarray) -> None:
-    """Raw binary, after opening, after closing — whole sheet and zoomed."""
+    """Raw binary, after opening, after closing, whole sheet and zoomed."""
     raw = threshold_adaptive(grey)
     opened = morph_open(raw)
     cleaned = morph_close(opened)
@@ -211,8 +211,8 @@ def make_morphology(grey: np.ndarray) -> None:
     stages = [
         (raw, "raw threshold"),
         (opened, f"after opening (k={config.MORPH_OPEN_K})"),
-        (cleaned, f"after closing (k={config.MORPH_CLOSE_K}) — kept"),
-        (over_closed, "closing k=7 — strokes fuse to the border"),
+        (cleaned, f"after closing (k={config.MORPH_CLOSE_K}), kept"),
+        (over_closed, "closing k=7, strokes fuse to the border"),
     ]
 
     fig, axes = plt.subplots(2, 4, figsize=(16, 7))
@@ -223,7 +223,7 @@ def make_morphology(grey: np.ndarray) -> None:
         _show(axes[1, column], image[ZOOM], f"{title} (zoom)")
 
     fig.suptitle(
-        "M4 — morphological clean-up. Opening deletes specks, closing repairs "
+        "M4, morphological clean-up. Opening deletes specks, closing repairs "
         "strokes;\nthe fourth column shows the failure that bounds how far "
         "closing can go",
         fontsize=11,
@@ -254,13 +254,13 @@ def make_metrics(results_per_sheet: dict[str, list[dict]]) -> None:
         ax.set_xticks(x + bar_width * (len(sheets) - 1) / 2)
         ax.set_xticklabels(methods)
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{ylabel} — {note}", fontsize=9)
+        ax.set_title(f"{ylabel}, {note}", fontsize=9)
         if key == "runtime_s":
             ax.set_yscale("log")
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=len(sheets), fontsize=8)
-    fig.suptitle("M4 — binarisation metrics per method, across all five sheets")
+    fig.suptitle("M4, binarisation metrics per method, across all five sheets")
     _save(fig, "m4_metrics.png", rect=(0, 0.05, 1, 1))
 
 

@@ -5,14 +5,14 @@
     key it writes into the shared context.
 
 ``outputs/figures/m1_montage_<date>.png``
-    The full step-by-step montage for one sheet — the picture the brief asks
+    The full step-by-step montage for one sheet; the picture the brief asks
     for when it says to show the progress of the image processing.
 
 ``outputs/figures/m1_timing.png``
     Seconds spent in each stage, so the discussion section can talk about cost
     rather than guess at it.
 
-Usage::
+Usage:
 
     python tools/make_m1_figures.py                     # first sheet
     python tools/make_m1_figures.py 12.07.2019.png      # a named sheet
@@ -155,7 +155,7 @@ def draw_timing(timings: dict[str, float], path: Path) -> Path:
     bars = axis.barh(names, seconds, color=BLOCK_FILL, edgecolor=BLOCK_EDGE)
     axis.invert_yaxis()
     axis.set_xlabel("seconds")
-    axis.set_title(f"Time per stage  —  total {sum(seconds):.2f} s")
+    axis.set_title(f"Time per stage, total {sum(seconds):.2f} s")
     axis.spines[["top", "right"]].set_visible(False)
 
     widest = max(seconds) if seconds else 1.0

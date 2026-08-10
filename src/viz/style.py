@@ -1,4 +1,4 @@
-"""M9 Visualisation & QA — House style.
+"""M9 Visualisation & QA, House style.
 
 Consistent fonts, a colour-blind-safe palette, no chartjunk.
 """

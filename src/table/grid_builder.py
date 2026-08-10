@@ -121,8 +121,8 @@ def _merge_closer_than(values: list[int], min_gap: int) -> list[int]:
     """Collapse runs of positions closer together than ``min_gap`` to their mean.
 
     A printed rule thick enough to produce two projection peaks arrives as two
-    line positions a few pixels apart. They are not two rows — no row is that
-    short — so they are averaged into one.
+    line positions a few pixels apart. They are not two rows; no row is that
+    short: so they are averaged into one.
     """
     if not values:
         return []
@@ -147,8 +147,8 @@ def longest_regular_run(ys: list[int], tolerance: float = ROW_SPACING_TOLERANCE)
     about 64 px, so any threshold that keeps the student rows together also
     swallows the table above it.
 
-    Even spacing does separate them. A ruled table is regular by construction —
-    its rows are the same height — while the lines around it are not. This
+    Even spacing does separate them. A ruled table is regular by construction,
+    its rows are the same height, while the lines around it are not. This
     returns the longest stretch whose gaps all sit within ``tolerance`` of that
     stretch's own median gap.
 
@@ -199,7 +199,7 @@ def select_student_table(row_bands: list[list[int]]) -> list[int]:
 
     # A thick printed rule can be detected twice, a few pixels apart. Those
     # near-duplicates are far closer together than a row is tall, and they
-    # break the regular run at the point they appear — which is why a table
+    # break the regular run at the point they appear; which is why a table
     # would otherwise be truncated part way down. Collapse them first.
     all_ys = _merge_closer_than(all_ys, MIN_ROW_HEIGHT)
 

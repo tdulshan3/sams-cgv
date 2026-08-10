@@ -2,7 +2,7 @@
 
 Turns ``ctx["warped"]`` (a flattened colour photo of the sheet) into
 ``ctx["grey"]``: one channel, evenly lit, denoised. M4's thresholding lives or
-dies on this output — see ``BUILD_SPEC.md`` section 9.3.
+dies on this output, see ``BUILD_SPEC.md`` section 9.3.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
 
     ``average`` and ``luminosity`` are written by hand with NumPy rather than
     ``cv2.cvtColor`` so the weights are visible. The luminosity weights
-    (0.299 R, 0.587 G, 0.114 B) are not arbitrary — they come from how the
+    (0.299 R, 0.587 G, 0.114 B) are not arbitrary; they come from how the
     human retina responds to colour. Cone cells are most numerous and most
     sensitive in the green part of the spectrum, so a green pixel *looks*
     brighter than a red or blue pixel of the same raw intensity even though a
@@ -57,7 +57,7 @@ def to_grey(bgr: np.ndarray, method: str = "luminosity") -> np.ndarray:
 
     if method == "average":
         # Simple mean of the three channels. Treats every channel as equally
-        # important, which is not how the human eye works — see luminosity.
+        # important, which is not how the human eye works, see luminosity.
         grey = (r + g + b) / 3.0
     elif method == "luminosity":
         # Weighted by how sensitive the human eye is to each colour: most
@@ -91,7 +91,7 @@ def denoise(grey: np.ndarray, method: str = "bilateral") -> np.ndarray:
         ValueError: ``method`` is not one of the four above.
     """
     if method == "gaussian":
-        # Blurs everything uniformly, edges included — fine for the sensor's
+        # Blurs everything uniformly, edges included, fine for the sensor's
         # gaussian noise floor, but it also softens pen strokes.
         return cv2.GaussianBlur(grey, (GAUSSIAN_KSIZE, GAUSSIAN_KSIZE), 0)
     if method == "median":
@@ -119,7 +119,7 @@ def estimate_background(grey: np.ndarray) -> np.ndarray:
 
     Dilating with a kernel wider than any pen stroke erases the strokes,
     leaving only the paper. A median blur then smooths what is left into a
-    slowly-varying lighting surface — bright where a shadow does not fall,
+    slowly-varying lighting surface; bright where a shadow does not fall,
     dim in the corner where it does.
     """
     kernel = cv2.getStructuringElement(
@@ -142,7 +142,7 @@ def remove_shadow(grey: np.ndarray) -> np.ndarray:
     ratio = grey.astype(np.float64) / (background.astype(np.float64) + 1e-6)
     flattened = np.clip(ratio * 255.0, 0, 255)
 
-    # The divide alone rarely reaches 0 or 255 — a shadowed corner's darkest
+    # The divide alone rarely reaches 0 or 255, a shadowed corner's darkest
     # ink still divides down to a mid-grey ratio, not black. Stretch the
     # result back out to the full range so downstream contrast and
     # thresholding get the dynamic range they expect.
@@ -176,7 +176,7 @@ def enhance_contrast(grey: np.ndarray, method: str = "clahe") -> np.ndarray:
         # Equalises each small tile of the page on its own, then blends tile
         # borders. A blank tile has little to stretch, so it stays quiet
         # instead of amplifying its own noise the way global equalisation
-        # does — the local strokes are what get boosted.
+        # does: the local strokes are what get boosted.
         clahe = cv2.createCLAHE(clipLimit=CLAHE_CLIP, tileGridSize=CLAHE_GRID)
         return clahe.apply(grey)
     raise ValueError(f"unknown contrast method {method!r}")

@@ -1,4 +1,4 @@
-# M7 — Decision & Database
+# M7: Decision & Database
 
 Individual contribution notes. Two pages minimum, per the coursework brief:
 what you built, the techniques you used and why, the problems you hit, and
@@ -25,23 +25,23 @@ the real schema, the real six students and the real five sheet dates, so the
 charts and the signature comparison could be developed against something before
 the image pipeline produced anything.
 
-Four tables — `students`, `sheets`, `attendance`, `signatures` — shown in
+Four tables: `students`, `sheets`, `attendance`, `signatures`, shown in
 `m7_er_diagram.png`. Two design points are worth naming. `attendance` is unique
 on `(student_index, sheet_id)` and every write is `INSERT OR REPLACE`, so
 re-running `sams.py` on a sheet updates the verdict instead of adding a second
 one; the row count after processing all five sheets twice is still 30, which is
-what `tests/test_db.py::test_processing_a_sheet_twice_does_not_duplicate` pins
+what `tests/test_db.py:test_processing_a_sheet_twice_does_not_duplicate` pins
 down. And every query binds its values as `?` parameters, which
 `test_sql_injection_in_an_index_changes_nothing` demonstrates by passing
 `10000409'; DROP TABLE attendance; --` as a student index and asserting the
-table is still there afterwards — that string reaches the database whenever a
+table is still there afterwards; that string reaches the database whenever a
 user mistypes an argument to `infovis.py`.
 
 ## Techniques and libraries
 
 **`xml.etree.ElementTree`, searching rather than walking.** The brief's Figure 1
 shows the batch element as `<15>`. XML tag names may not begin with a digit, so
-that document is not well-formed and no standard parser will read it at all —
+that document is not well-formed and no standard parser will read it at all;
 our reconstructed file carries `<batch year="2016.1">` instead. Rather than
 depend on either shape, the parser finds students with `.//student` and the
 subject with `.//subject`, which survives the nesting changing again. Indices
@@ -72,7 +72,7 @@ joins M6's measurements for each of the thirty signature cells against
 between the highest genuinely-blank cell (0.0173) and the lowest real signature
 (0.0546) scores identically, because no cell lies between them. Taking the
 first best-scoring value would put the threshold hard against one cell's
-measurement. I take the midpoint of the widest plateau instead — 0.0359, which
+measurement. I take the midpoint of the widest plateau instead, 0.0359, which
 is the value furthest from being wrong about any cell we have seen.
 
 **The plateau lied the first time I looked at it.** Swept with the full rule,
@@ -80,15 +80,15 @@ the plateau ran all the way down to zero, which would have suggested a
 threshold of nearly nothing was fine. It was not: `MIN_STROKE_LENGTH` was
 quietly rejecting the faint cell on its own, and a threshold chosen there would
 have been resting on a different feature entirely. The tool now runs two
-sweeps — ink ratio alone, which chooses the threshold, and the full rule, which
-shows what the other features buy — and `m7_threshold_sweep.png` plots both.
+sweeps: ink ratio alone, which chooses the threshold, and the full rule, which
+shows what the other features buy, and `m7_threshold_sweep.png` plots both.
 Ink alone reaches 93.3%; the full rule reaches 96.7%.
 
 **Ink is not the same thing as a signature.** Two cells were known in advance to
 hold ink that means *absent* (BUILD_SPEC.md §4 deviation 7), and they are the
 whole reason the rule is not one number:
 
-- **21.06.2019 / 10009306** — the lecturer marked the student absent by ruling a
+- **21.06.2019 / 10009306**: the lecturer marked the student absent by ruling a
   line across the box and writing `ab` on it. It covers 74% of the cell, where
   the largest genuine signature in the data covers 37%. `MAX_INK_RATIO = 0.55`
   rejects it. This is the one rule here fitted to a single example, so I have
@@ -96,12 +96,12 @@ whole reason the rule is not one number:
   signature is strokes on paper and not a filled box, so an upper bound is the
   right *shape* of rule, but one supporting cell is not evidence that 0.55 is
   the right number.
-- **05.07.2019 / 10009303 — still wrong, and the interesting one.** The cell
+- **05.07.2019 / 10009303: still wrong, and the interesting one.** The cell
   holds a small stray red pen mark on otherwise blank paper. It should read as
   near-zero ink. It reads 0.274, because M6's ink mask marks a large region of
   blank paper as ink; opening the crop and its mask side by side makes this
   obvious. No threshold on any feature M6 supplies separates it from a genuine
-  signature — its stroke length (192) and fill ratio (0.76) both sit inside the
+  signature: its stroke length (192) and fill ratio (0.76) both sit inside the
   present distribution. **This failure is in the ink mask, not in the decision
   rule, and no decision rule can fix it.** I raised it with M6 rather than
   fitting a rule around one bad measurement.
@@ -116,7 +116,7 @@ which is the failure worth having.
 
 **M6 could not name its own output files.** The spec has M6 saving crops as
 `outputs/cells/<date>/<index>.png` for M8, but at that point in the pipeline
-nothing knows the index — the mapping is this module's job, and it runs after.
+nothing knows the index; the mapping is this module's job, and it runs after.
 M6 saves `row_<n>.png`; `DecisionStage` renames each to `<index>.png` once the
 mapping is known, which is the first point in the run where both facts are in
 hand. `investigate.py` finds all five samples per student as a result.
@@ -124,7 +124,7 @@ hand. `investigate.py` finds all five samples per student as a result.
 **Accuracy, reported both ways.** 29/30 = **96.7%** over all thirty cells;
 28/28 = **100%** over the twenty-eight that exclude the two cells known in
 advance to hold non-signature ink. Both numbers are in
-`m7_confusion_matrix.png` and neither is quoted on its own — the second alone
+`m7_confusion_matrix.png` and neither is quoted on its own; the second alone
 would be flattering, the first alone hides which failure belongs to which
 module. Every error is a false *present*: no student who signed is ever marked
 absent, which is the direction to err in if attendance affects eligibility.

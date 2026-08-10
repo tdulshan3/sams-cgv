@@ -1,8 +1,8 @@
 """Investigation report for one student's signature run.
 
 ``matcher.investigate`` assembles a report object and returns it so callers
-can inspect the results programmatically — tests, the evaluation tool, and
-any future visualisation layer — rather than only reading printed output.
+can inspect the results programmatically, tests, the evaluation tool, and
+any future visualisation layer, rather than only reading printed output.
 
 The report carries the same information ``investigate.py`` prints, in a form
 that is easy to pass around and inspect without capturing stdout.

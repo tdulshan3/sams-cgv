@@ -1,6 +1,6 @@
 """Compare one student's signatures across sheets and report a mismatch.
 
-This is the module ``investigate.py`` calls into — see that file's docstring
+This is the module ``investigate.py`` calls into, see that file's docstring
 for the command line contract. Everything here assumes ``investigate.py`` (via
 ``src.cli.signature_samples``) has already confirmed there are at least two
 saved signatures for the student; this module does not repeat that check on
@@ -29,7 +29,7 @@ from src.utils.logging import get_logger
 log = get_logger("recognise.matcher")
 
 SHEET_DATE_FORMAT = "%d.%m.%Y"
-"""Sheet folder names are e.g. ``12.07.2019`` — day first, so a plain string
+"""Sheet folder names are e.g. ``12.07.2019``, day first, so a plain string
 sort puts July before May. Every place that needs chronological order must
 parse through this format rather than sorting the folder name directly.
 """
@@ -39,7 +39,7 @@ parse through this format rather than sorting the folder name directly.
 class SignatureSample:
     """One student's signature, as saved by M6 for a single sheet.
 
-    ``mask`` is what every comparison in this module actually operates on —
+    ``mask`` is what every comparison in this module actually operates on,
     ink = 255, background = 0, not yet normalised. ``crop`` is kept alongside
     it purely for figures (T8's report images want to show the original
     colour ink, not just the mask).
@@ -55,7 +55,7 @@ def _sheet_date_key(cell_dir: Path) -> tuple[int, str]:
     """Sort key for a sheet's cell folder: real chronological order first.
 
     Falls back to the raw name (pushed after every real date, via the ``1``
-    tag) for any folder that doesn't parse — a stray or renamed folder should
+    tag) for any folder that doesn't parse; a stray or renamed folder should
     not crash a comparison run, just sort last and predictably.
     """
     try:
@@ -68,7 +68,7 @@ def _sheet_date_key(cell_dir: Path) -> tuple[int, str]:
 def _read_mask(cell_dir: Path, index: str) -> np.ndarray | None:
     """Load the saved ink mask for one student in one sheet's cell folder.
 
-    Returns ``None`` rather than raising when the mask file is absent — this
+    Returns ``None`` rather than raising when the mask file is absent; this
     is the situation before M6 lands, and callers decide what to do about it
     (see :func:`load_samples`, which falls back to deriving a rough mask from
     the colour crop so the pipeline stays runnable rather than blocking on
@@ -87,12 +87,12 @@ def _read_mask(cell_dir: Path, index: str) -> np.ndarray | None:
 def _bootstrap_mask(crop: np.ndarray) -> np.ndarray:
     """A rough ink mask from a colour crop, used only when M6's real mask is missing.
 
-    Plain saturation-or-darkness threshold — deliberately not a real ink
+    Plain saturation-or-darkness threshold, deliberately not a real ink
     segmentation. This exists so ``investigate.py`` can be demonstrated end to
     end before M6's module merges; the moment a real ``<index>_mask.png`` is
     on disk, :func:`load_samples` prefers it and this function is never
     called for that sample. Not a substitute for M6's work and not meant to
-    be tuned — it is a placeholder, in the same spirit as ``src/stubs.py``.
+    be tuned: it is a placeholder, in the same spirit as ``src/stubs.py``.
     """
     hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
     saturation, value = hsv[:, :, 1], hsv[:, :, 2]
@@ -114,7 +114,7 @@ def load_samples(index: str) -> list[SignatureSample]:
     data rather than just the dates, since comparison needs the images.
 
     A student with zero saved crops gets an empty list back, not an
-    exception — an empty or short list is an ordinary state of the project
+    exception: an empty or short list is an ordinary state of the project
     (see T1) and it is every caller's job to decide what to do about it, not
     this function's.
     """
@@ -138,7 +138,7 @@ def load_samples(index: str) -> list[SignatureSample]:
         mask = _read_mask(cell_dir, index)
         if mask is None:
             log.debug(
-                "no saved mask for %s on %s yet — using a rough bootstrap mask",
+                "no saved mask for %s on %s yet, using a rough bootstrap mask",
                 index,
                 cell_dir.name,
             )
@@ -162,7 +162,7 @@ class MatchScore:
     combined verdict.
 
     Every field except ``verdict`` is a float in ``[0, 1]`` where ``1`` means
-    identical — the shared convention every function in ``features.py``
+    identical: the shared convention every function in ``features.py``
     guarantees. Keeping all five alongside the combined score (rather than
     just returning the combined float) is what lets T7's printout show the
     per-feature breakdown, not just a final number nobody can audit.
@@ -175,7 +175,7 @@ class MatchScore:
     custom: float
     combined: float
     verdict: str
-    """One of ``"match"``, ``"mismatch"``, ``"uncertain"`` — see :func:`_verdict`."""
+    """One of ``"match"``, ``"mismatch"``, ``"uncertain"``, see :func:`_verdict`."""
 
 
 @dataclass(frozen=True)
@@ -464,7 +464,7 @@ def _investigate_summary(samples: Sequence[SignatureSample], comparisons: Sequen
 def _weighted_combine(ssim: float, hog: float, hu: float, orb: float, custom: float) -> float:
     """Combine the five feature scores into one, using ``config.SCORE_WEIGHTS``.
 
-    A plain weighted sum, not an average of some cleverer kind — every
+    A plain weighted sum, not an average of some cleverer kind; every
     weight is a fraction of one whole (they sum to 1.0, see the config
     docstring), so the result stays in ``[0, 1]`` automatically as long as
     every input does. Which weights are right is not decided here: T5's
@@ -488,8 +488,8 @@ def _verdict(combined: float) -> str:
     was set from an experiment on 41 genuine pairs (T5), not a law of nature,
     so a score that lands close to it either side is exactly the kind of case
     the threshold itself is least sure about. Reporting that honestly as
-    "uncertain" — rather than forcing a confident-looking match or mismatch
-    out of a borderline number — is, per the brief, a strength of this
+    "uncertain", rather than forcing a confident-looking match or mismatch
+    out of a borderline number, is, per the brief, a strength of this
     module, not a weakness to hide.
 
     * ``combined >= MATCH_THRESHOLD`` → ``"match"``
@@ -509,7 +509,7 @@ def compare(a: np.ndarray, b: np.ndarray) -> MatchScore:
     Parameters
     ----------
     a, b:
-        Ink masks, ink = 255, background = 0 — *not* yet normalised.
+        Ink masks, ink = 255, background = 0, *not* yet normalised.
         ``compare`` does that itself, so every caller (T1's loader, T6's
         similarity matrix, T5's eval script) can pass a
         :class:`SignatureSample`'s raw ``mask`` straight through without
@@ -544,7 +544,7 @@ def compare(a: np.ndarray, b: np.ndarray) -> MatchScore:
 
 
 MIN_SAMPLES = 2
-"""One signature cannot be compared with anything — mirrors investigate.py's
+"""One signature cannot be compared with anything, mirrors investigate.py's
 own constant. Duplicated rather than imported so this module has no
 dependency on the CLI layer; ``investigate.py`` already screens this case
 before calling in, but ``investigate()`` must still handle it safely on its
@@ -561,7 +561,7 @@ def investigate(index: str, save_only: bool = False) -> None:
         Student index, e.g. ``"10000409"``.
     save_only:
         When ``True``, write the comparison figure to
-        ``outputs/figures/`` and print no window — for headless / CI runs.
+        ``outputs/figures/`` and print no window, for headless / CI runs.
 
     A student with fewer than :data:`MIN_SAMPLES` saved signatures is not an
     error: there is nothing to compare yet, so this prints a plain
@@ -571,14 +571,14 @@ def investigate(index: str, save_only: bool = False) -> None:
     if len(samples) < MIN_SAMPLES:
         print(
             f"student {index} has {len(samples)} saved signature "
-            f"{'sample' if len(samples) == 1 else 'samples'} — "
+            f"{'sample' if len(samples) == 1 else 'samples'}, "
             f"at least {MIN_SAMPLES} are needed to compare"
         )
         return
 
     comparisons = pairwise_comparisons(samples)
 
-    print(f"Student {index} — {student_name(index)} — {len(samples)} samples")
+    print(f"Student {index}, {student_name(index)}, {len(samples)} samples")
     print("  pair                        SSIM   HOG    HU     ORB    OWN    COMBINED")
     for comparison in comparisons:
         print(_format_pair_row(comparison.left, comparison.right, comparison.score))

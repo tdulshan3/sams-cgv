@@ -1,4 +1,4 @@
-"""Bootstrap fixtures — temporary scaffolding, delete once M2 to M4 land.
+"""Bootstrap fixtures, temporary scaffolding, delete once M2 to M4 land.
 
 M4, M5, M6, M7 and M8 all need an input image to develop against, and none of
 them can wait for the real geometry and enhancement stages to be finished. This
@@ -11,7 +11,7 @@ threshold.
 M2, M3 and M4 are merged, these fixtures stop being the truth and this file is
 deleted along with ``data/fixtures/``.
 
-Written by M1 for task T4. Usage::
+Written by M1 for task T4. Usage:
 
     python tools/make_fixtures.py
 """
@@ -42,7 +42,7 @@ SHEET_CROP = (0.03, 0.25, 0.92, 0.60)
 CELL_CROP = (0.645, 0.437, 0.833, 0.460)
 """``(left, top, right, bottom)`` of one signed signature cell, same units.
 
-Row 3 of the first sheet, student 10009302 — a clear blue signature whose
+Row 3 of the first sheet, student 10009302, a clear blue signature whose
 stroke runs past the right hand border, which is the awkward case M6 has to
 cope with anyway.
 """
@@ -99,7 +99,7 @@ def main() -> int:
 
     print()
     print("Bootstrap fixtures written to data/fixtures/.")
-    print("Temporary scaffolding — delete once M2, M3 and M4 are merged.")
+    print("Temporary scaffolding, delete once M2, M3 and M4 are merged.")
     return 0
 
 

@@ -84,9 +84,9 @@ def _rotate(bgr: np.ndarray, angle: float) -> np.ndarray:
 def original_vs_warped(bgr: np.ndarray, name: str) -> None:
     steps = _stages(bgr)
     figure, axes = plt.subplots(1, 2, figsize=(9, 6), dpi=config.FIGURE_DPI)
-    _panel(axes[0], bgr, f"original photo — {name}")
+    _panel(axes[0], bgr, f"original photo, {name}")
     _panel(axes[1], steps["warped"], "after geometry correction")
-    figure.suptitle("M2 — geometry correction", fontsize=12)
+    figure.suptitle("M2, geometry correction", fontsize=12)
     figure.tight_layout()
     _save(figure, "m2_original_vs_warped.png")
 
@@ -101,12 +101,12 @@ def corner_detection(bgr: np.ndarray) -> None:
             cv2.circle(overlay, tuple(point.astype(int)), 12, (0, 0, 255), -1)
         caption = "4 corners found"
     else:
-        caption = "no 4-sided outline above the area threshold\n(paper on a pale desk — rotation fallback used)"
+        caption = "no 4-sided outline above the area threshold\n(paper on a pale desk, rotation fallback used)"
 
     figure, axes = plt.subplots(1, 2, figsize=(9, 6), dpi=config.FIGURE_DPI)
     _panel(axes[0], steps["edges"], "Canny edge map")
     _panel(axes[1], overlay, caption)
-    figure.suptitle("M2 — sheet outline detection", fontsize=12)
+    figure.suptitle("M2, sheet outline detection", fontsize=12)
     figure.tight_layout()
     _save(figure, "m2_corner_detection.png")
 
@@ -118,7 +118,7 @@ def warp_steps(bgr: np.ndarray) -> None:
     _panel(axes[1], steps["edges"], "2. edges")
     _panel(axes[2], steps["outline"], "3. largest contour")
     _panel(axes[3], steps["warped"], "4. corrected")
-    figure.suptitle("M2 — the geometry stage, step by step", fontsize=12)
+    figure.suptitle("M2, the geometry stage, step by step", fontsize=12)
     figure.tight_layout()
     _save(figure, "m2_warp_steps.png")
 
@@ -132,8 +132,8 @@ def skew_correction(bgr: np.ndarray) -> None:
 
     figure, axes = plt.subplots(1, 2, figsize=(9, 6), dpi=config.FIGURE_DPI)
     _panel(axes[0], tilted, "tilted by 6.0° on purpose")
-    _panel(axes[1], corrected, f"corrected — Hough measured {measured:+.2f}°")
-    figure.suptitle("M2 — residual skew correction", fontsize=12)
+    _panel(axes[1], corrected, f"corrected, Hough measured {measured:+.2f}°")
+    figure.suptitle("M2, residual skew correction", fontsize=12)
     figure.tight_layout()
     _save(figure, "m2_skew_correction.png")
 
@@ -144,7 +144,7 @@ def all_sheets_grid(sheets: list[Path]) -> None:
         bgr = resize_to_width(load_image(path))
         used = "warp" if find_sheet_corners(bgr) is not None else "rotate"
         _panel(axis, _stages(bgr)["warped"], f"{path.stem}\n({used})")
-    figure.suptitle("M2 — all five sheets after geometry correction", fontsize=12)
+    figure.suptitle("M2, all five sheets after geometry correction", fontsize=12)
     figure.tight_layout()
     _save(figure, "m2_all_sheets_grid.png")
 

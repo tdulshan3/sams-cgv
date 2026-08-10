@@ -191,7 +191,7 @@ def test_an_unreadable_database_reads_as_empty(tmp_path, monkeypatch):
 
     ``infovis.py`` asks ``is_empty()`` before it draws anything. If the file on
     disk is not a database it can read, the useful answer is "there is nothing
-    here yet, run sams.py" — section 10 of the spec allows no traceback for a
+    here yet, run sams.py", section 10 of the spec allows no traceback for a
     situation the user did not cause.
     """
     from src.io import db as db_module
@@ -228,7 +228,7 @@ def test_parse_students_keeps_indices_as_strings(tmp_path):
 
 
 def test_parse_info_finds_students_at_any_depth_and_reads_the_subject(tmp_path):
-    """``.//student`` survives the batch element changing shape — spec §4 deviation 4."""
+    """``.//student`` survives the batch element changing shape, spec §4 deviation 4."""
     path = tmp_path / "info.xml"
     path.write_text(INFO_XML, encoding="utf-8")
 

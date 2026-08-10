@@ -28,7 +28,7 @@ def _attach_student_indices(cells: list[Cell], students: list) -> None:
     every cell already carries an index and this is a no-op.
 
     Does nothing when the roll is empty or shorter than the sheet, rather than
-    guessing — a wrong index on a signature crop is worse than no index.
+    guessing: a wrong index on a signature crop is worse than no index.
     """
     if not students:
         return
@@ -60,7 +60,7 @@ def _clear_previous_crops(sheet_date: str) -> None:
 
 
 class InkStage(Stage):
-    """M6 — Cell Cleaning & Ink Segmentation Stage.
+    """M6, Cell Cleaning & Ink Segmentation Stage.
 
     Reads ctx['cells'] (list[Cell] with BGR .image).
     Writes ctx['ink'] -> list[InkResult], one per cell, in the same order.
@@ -83,7 +83,7 @@ class InkStage(Stage):
         # Name saved crops by student index, not row number. BUILD_SPEC.md
         # section 5.4 fixes the path as outputs/cells/<date>/<index>.png, and
         # that is what investigate.py globs to count a student's samples and
-        # what M8 looks up. A Cell does not carry its index — M7 attaches it —
+        # what M8 looks up. A Cell does not carry its index, M7 attaches it,
         # so until their parser lands ctx["students"] is empty and the crops
         # fall back to row numbers. This lights up on its own the day M7
         # merges; M7's own mapping is authoritative and supersedes it.

@@ -1,10 +1,10 @@
-# M4 — Binarisation & Morphology
+# M4: Binarisation & Morphology
 
 Individual contribution notes.
 
 ## What I built
 
-`src/preprocess/binarize.py` — the stage that turns M3's evenly lit greyscale
+`src/preprocess/binarize.py`; the stage that turns M3's evenly lit greyscale
 sheet into a two-valued image where **ink is 255 and paper is 0**, then cleans
 it with morphology. Fifteen functions and one `Stage` subclass, plus
 `tests/test_binarize.py` and `tools/make_m4_figures.py`.
@@ -27,10 +27,10 @@ obviously wrong picture.
 ## Techniques, and why each was chosen
 
 **Otsu written by hand.** Calling `cv2.THRESH_OTSU` and stopping would have
-been a line of code and nothing to say about it. Implementing the search —
+been a line of code and nothing to say about it. Implementing the search,
 build the 256-bin normalised histogram, and for every candidate `t` compute the
 two class weights and means and maximise the between-class variance
-`w₀·w₁·(m₀−m₁)²` — means the report can state the equation and show the variance
+`w₀·w₁·(m₀−m₁)²`; means the report can state the equation and show the variance
 curve. `tests/test_binarize.py` checks the hand-written value against OpenCV's
 to within one grey level, which is both a test and the evidence that the
 implementation is right.
@@ -52,8 +52,8 @@ than in the call.
 
 `ADAPTIVE_BLOCK = 41` and `ADAPTIVE_C = 12` were chosen by sweeping block sizes
 15–51 against `c` 5–15 on all five sheets. The result is a broad plateau rather
-than a peak — ink coverage moves only between 7.6% and 10.0% across the whole
-grid — so the values were picked to sit away from the edges rather than to
+than a peak: ink coverage moves only between 7.6% and 10.0% across the whole
+grid: so the values were picked to sit away from the edges rather than to
 chase a maximum:
 
 * `c = 5` is a cliff, not a slope. Component count jumps from ~400 to ~1100 as
@@ -73,7 +73,7 @@ border it is touching. The sweep shows it plainly:
 | 2 / 5 | 8.96 | 287 |
 | 3 / 7 | 9.38 | 174 |
 
-Falling component count with *rising* ink is not cleaning — it is separate
+Falling component count with *rising* ink is not cleaning; it is separate
 objects merging into one. By kernel 7 more than half the components on the page
 have joined a neighbour, and on a signing sheet the nearest neighbour of a
 signature is the row rule beneath it. `MORPH_OPEN_K = 2, MORPH_CLOSE_K = 3`
@@ -82,11 +82,11 @@ a larger kernel produces a prettier image.
 
 ## Evidence
 
-* `m4_threshold_comparison.png` — global, Otsu, adaptive and Sauvola side by side
-* `m4_otsu_histogram.png` — the grey histogram with the chosen threshold and the between-class variance curve
-* `m4_global_failure.png` — the shadowed sheet where one global value cannot work
-* `m4_morphology.png` — raw binary, after opening, after closing, with a zoomed crop
-* `m4_metrics.png` — ink %, component count and runtime per method
+* `m4_threshold_comparison.png`, global, Otsu, adaptive and Sauvola side by side
+* `m4_otsu_histogram.png`, the grey histogram with the chosen threshold and the between-class variance curve
+* `m4_global_failure.png`, the shadowed sheet where one global value cannot work
+* `m4_morphology.png`, raw binary, after opening, after closing, with a zoomed crop
+* `m4_metrics.png`, ink %, component count and runtime per method
 
 `pytest tests/test_binarize.py` covers the polarity, the Otsu agreement, and
 the effect of each morphology operation.

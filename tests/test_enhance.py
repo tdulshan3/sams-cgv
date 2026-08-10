@@ -1,7 +1,7 @@
 """Tests for greyscale conversion, denoising, shadow removal and contrast.
 
 Covers BUILD_SPEC.md section 11 (M3) plus the PSNR/runtime measurement T2
-asks for. Synthetic images only — small and fast, per section 11's note that
+asks for. Synthetic images only, small and fast, per section 11's note that
 a test needing a full sheet photo is slow and tells you less.
 """
 
@@ -82,7 +82,7 @@ def test_unknown_method_raises_value_error():
 
 def test_denoise_psnr_and_runtime_metrics():
     """Every denoise method runs, improves PSNR over the noisy input, and
-    reports a runtime — the comparison T2 asks for rather than a claim."""
+    reports a runtime: the comparison T2 asks for rather than a claim."""
     rng = np.random.default_rng(0)
     clean = np.full((80, 80), 200, dtype=np.uint8)
     noisy = np.clip(

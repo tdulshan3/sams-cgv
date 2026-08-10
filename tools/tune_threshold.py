@@ -5,14 +5,14 @@
 in M7 that must not be guessed. This runs the real pipeline over all five
 sheets, joins what M6 measured in each of the thirty signature cells against
 the hand-labelled ``data/ground_truth.csv``, and sweeps the threshold across
-its whole range to show what each value would score::
+its whole range to show what each value would score:
 
     python tools/tune_threshold.py              # run the pipeline, then sweep
     python tools/tune_threshold.py --cached     # re-sweep the last run's features
 
 The pipeline pass takes about ten seconds a sheet, so the features are cached
 at ``outputs/decision_features.csv`` and ``tools/make_m7_figures.py`` draws its
-figures from that same file — the numbers in the report and the numbers behind
+figures from that same file, the numbers in the report and the numbers behind
 the chosen threshold are then guaranteed to be the same numbers.
 
 Accuracy is always reported twice: over all 30 cells, and over the 28 that
@@ -83,7 +83,7 @@ def load_ground_truth() -> dict[tuple[str, str], tuple[int, str]]:
     """``{(date, index): (present, note)}`` from the hand-labelled CSV."""
     if not config.GROUND_TRUTH.is_file():
         raise FileNotFoundError(
-            f"No ground truth at {config.GROUND_TRUTH}. It is committed — check your clone."
+            f"No ground truth at {config.GROUND_TRUTH}. It is committed, check your clone."
         )
     truth: dict[tuple[str, str], tuple[int, str]] = {}
     with config.GROUND_TRUTH.open(newline="", encoding="utf-8") as handle:
@@ -119,7 +119,7 @@ def collect_features() -> list[CellSample]:
         ink = ctx.get("ink") or []
         if len(ink) != len(students):
             log.warning(
-                "%s: %d cells for %d students — pairing the first %d",
+                "%s: %d cells for %d students, pairing the first %d",
                 path.stem,
                 len(ink),
                 len(students),
@@ -133,7 +133,7 @@ def collect_features() -> list[CellSample]:
             # filled_ratio is how much of the stroke's own bounding box the ink
             # fills, and it is the feature that would separate a compact blob
             # from a sprawling signature. InkResult does not carry it, so it is
-            # recomputed from the mask rather than recorded as a placeholder —
+            # recomputed from the mask rather than recorded as a placeholder,
             # a column of zeros in the cache would look like a measurement and
             # be quoted as one.
             extra = ink_features(result.mask) if result.mask is not None else {}
@@ -169,7 +169,7 @@ def load_features(path: Path = FEATURES_CSV) -> list[CellSample]:
     """Read the cache back, or say clearly that there is not one yet."""
     if not path.is_file():
         raise FileNotFoundError(
-            f"No cached features at {path} — run `python tools/tune_threshold.py` first"
+            f"No cached features at {path}, run `python tools/tune_threshold.py` first"
         )
     samples = []
     with path.open(newline="", encoding="utf-8") as handle:
@@ -260,7 +260,7 @@ def best_plateau(thresholds: list[float], scores: list[float]) -> tuple[float, f
     widest plateau is the value furthest from being wrong about any cell.
 
     Returns:
-        ``(chosen, low, high)`` — the midpoint and the plateau's two edges.
+        ``(chosen, low, high)``, the midpoint and the plateau's two edges.
     """
     top = max(scores)
     best_run: tuple[int, int] | None = None
@@ -330,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Two sweeps, because they answer two different questions. The threshold is
     # chosen from the first: what can ink coverage do on its own? Read off the
-    # full rule instead and the plateau runs all the way down to zero — not
+    # full rule instead and the plateau runs all the way down to zero, not
     # because a threshold of zero is sound, but because MIN_STROKE_LENGTH is
     # quietly covering for it. A threshold picked there would be resting on
     # another feature and would fail the moment that feature moved.
@@ -344,12 +344,12 @@ def main(argv: list[str] | None = None) -> int:
     chosen, low, high = best_plateau(thresholds, ink_scores)
     _, rule_scores = sweep(samples, **full_rule)
 
-    print("\nsweep — ink ratio alone (chooses the threshold)")
+    print("\nsweep, ink ratio alone (chooses the threshold)")
     print(f"  best accuracy    : {max(ink_scores):.1%}")
     print(f"  plateau          : {low:.4f} … {high:.4f}")
     print(f"  chosen (midpoint): {chosen:.4f}")
     print(f"  config currently : {config.INK_RATIO_THRESHOLD:.4f}")
-    print("\nsweep — full rule (what the extra features buy)")
+    print("\nsweep, full rule (what the extra features buy)")
     print(f"  best accuracy    : {max(rule_scores):.1%}")
     print(f"  at chosen value  : {accuracy(samples, config.INK_RATIO_THRESHOLD, **full_rule):.1%}")
 

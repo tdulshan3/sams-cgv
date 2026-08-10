@@ -46,7 +46,7 @@ def _order_points(pts: np.ndarray) -> np.ndarray:
 
 def find_sheet_corners(bgr: np.ndarray) -> np.ndarray | None:
     """(4, 2) float32, ordered top-left, top-right, bottom-right, bottom-left.
-    None when not found — that is a normal outcome, not an error."""
+    None when not found; that is a normal outcome, not an error."""
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, CANNY_LOW, CANNY_HIGH)
@@ -69,7 +69,7 @@ def find_sheet_corners(bgr: np.ndarray) -> np.ndarray | None:
             if len(approx) == 4:
                 # Reject anything too small to be the sheet. Without this the
                 # first four-sided thing found wins, which on these photos is
-                # the student table or a fragment of it — the warp then crops
+                # the student table or a fragment of it; the warp then crops
                 # to a sliver and every later stage sees almost nothing.
                 if cv2.contourArea(approx) / full_area >= MIN_SHEET_AREA_RATIO:
                     pts = approx.reshape((4, 2)).astype(np.float32)

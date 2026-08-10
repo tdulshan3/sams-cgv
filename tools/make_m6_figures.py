@@ -60,7 +60,7 @@ def run_pipeline_on_sheet(sheet_path: Path) -> dict:
 
 
 def make_fig1_colour_spaces(sample_cell: np.ndarray) -> None:
-    """m6_colour_spaces.png — BGR, H, S, V and LAB a/b channels."""
+    """m6_colour_spaces.png, BGR, H, S, V and LAB a/b channels."""
     hsv = cv2.cvtColor(sample_cell, cv2.COLOR_BGR2HSV)
     lab = cv2.cvtColor(sample_cell, cv2.COLOR_BGR2LAB)
 
@@ -76,19 +76,19 @@ def make_fig1_colour_spaces(sample_cell: np.ndarray) -> None:
     axes[0, 0].set_title("(a) BGR Colour Crop", fontsize=10)
 
     axes[0, 1].imshow(h_chan, cmap="hsv")
-    axes[0, 1].set_title("(b) HSV — Hue (H)", fontsize=10)
+    axes[0, 1].set_title("(b) HSV, Hue (H)", fontsize=10)
 
     axes[0, 2].imshow(s_chan, cmap="magma")
-    axes[0, 2].set_title("(c) HSV — Saturation (S)", fontsize=10)
+    axes[0, 2].set_title("(c) HSV, Saturation (S)", fontsize=10)
 
     axes[1, 0].imshow(v_chan, cmap="gray")
-    axes[1, 0].set_title("(d) HSV — Value (V)", fontsize=10)
+    axes[1, 0].set_title("(d) HSV, Value (V)", fontsize=10)
 
     axes[1, 1].imshow(a_chan, cmap="coolwarm")
-    axes[1, 1].set_title("(e) LAB — a* Channel", fontsize=10)
+    axes[1, 1].set_title("(e) LAB, a* Channel", fontsize=10)
 
     axes[1, 2].imshow(b_chan, cmap="coolwarm")
-    axes[1, 2].set_title("(f) LAB — b* Channel", fontsize=10)
+    axes[1, 2].set_title("(f) LAB, b* Channel", fontsize=10)
 
     for ax in axes.ravel():
         ax.axis("off")
@@ -98,7 +98,7 @@ def make_fig1_colour_spaces(sample_cell: np.ndarray) -> None:
 
 
 def make_fig2_hue_scatter(sheets_data: list[dict]) -> None:
-    """m6_hue_scatter.png — Scatter of hue vs saturation for ink pixels."""
+    """m6_hue_scatter.png, Scatter of hue vs saturation for ink pixels."""
     hues_by_color = {"blue": [], "black": [], "red": [], "green": [], "other": []}
     sats_by_color = {"blue": [], "black": [], "red": [], "green": [], "other": []}
 
@@ -142,7 +142,7 @@ def make_fig2_hue_scatter(sheets_data: list[dict]) -> None:
 
 
 def make_fig3_mask_panels(sheets_data: list[dict]) -> None:
-    """m6_mask_panels.png — 6 cells: crop -> HSV mask -> cleaned mask."""
+    """m6_mask_panels.png, 6 cells: crop -> HSV mask -> cleaned mask."""
     all_res = []
     for ctx in sheets_data:
         all_res.extend(ctx.get("ink", []))
@@ -179,7 +179,7 @@ def make_fig3_mask_panels(sheets_data: list[dict]) -> None:
 
 
 def make_fig4_border_removal(sample_cell: np.ndarray) -> None:
-    """m6_border_removal.png — Before and after removing leftover table lines."""
+    """m6_border_removal.png, Before and after removing leftover table lines."""
     raw_crop = sample_cell.copy()
 
     # Add artificial dark border line to demonstrate line removal clearly
@@ -202,7 +202,7 @@ def make_fig4_border_removal(sample_cell: np.ndarray) -> None:
 
 
 def make_fig5_pen_colour_counts(sheets_data: list[dict]) -> None:
-    """m6_pen_colour_counts.png — Bar chart of pen colours used per sheet."""
+    """m6_pen_colour_counts.png, Bar chart of pen colours used per sheet."""
     sheet_dates = [ctx["sheet"].date for ctx in sheets_data]
     colors = ["blue", "black", "red", "green"]
 
@@ -236,7 +236,7 @@ def make_fig5_pen_colour_counts(sheets_data: list[dict]) -> None:
 
 
 def make_fig6_empty_vs_signed(sheets_data: list[dict]) -> None:
-    """m6_empty_vs_signed.png — An empty cell and a signed cell with ink ratios."""
+    """m6_empty_vs_signed.png, An empty cell and a signed cell with ink ratios."""
     all_res = []
     for ctx in sheets_data:
         all_res.extend(ctx.get("ink", []))

@@ -11,8 +11,8 @@ now let three separate defects reach ``main``:
   enough lines in it to return a result.
 
 Each was found by running ``sams.py`` by hand. These tests are that run, made
-automatic. They are deliberately about *outcomes* — how many cells, of what
-shape, in which column — rather than about any module's internals, so they stay
+automatic. They are deliberately about *outcomes*, how many cells, of what
+shape, in which column, rather than about any module's internals, so they stay
 valid as M2 and M5 keep tuning.
 
 They are slower than the rest of the suite (a few seconds per sheet). That is
@@ -72,7 +72,7 @@ def test_geometry_keeps_the_whole_page(processed: dict) -> None:
     warped_area = warped.shape[0] * warped.shape[1]
 
     assert warped_area > 0.5 * original_area, (
-        f"warped is {warped_area / original_area:.1%} of the photo — "
+        f"warped is {warped_area / original_area:.1%} of the photo; "
         "geometry has cropped to something smaller than the sheet"
     )
 
@@ -92,7 +92,7 @@ def test_grid_has_the_measured_shape(processed: dict) -> None:
 
 
 def test_cells_are_colour_crops_of_the_signature_column(processed: dict) -> None:
-    """M6 needs BGR, not binary — pen colour is their whole method.
+    """M6 needs BGR, not binary; pen colour is their whole method.
 
     The column index matters as much as the count: when spurious vertical lines
     shifted the grid, six cells were still produced and every one of them held a
@@ -124,7 +124,7 @@ def test_ink_results_carry_every_feature_m7_needs(processed: dict) -> None:
 
     ``filled_ratio`` and ``centroid_offset`` were being computed by M6 and then
     dropped at the ``InkResult`` boundary. They are the two that separate a
-    signature from ink that is not one — on ``21.06.2019`` the lecturer's
+    signature from ink that is not one, on ``21.06.2019`` the lecturer's
     handwritten ``ab`` has a higher ink ratio than any real signature on any
     sheet, so ink ratio alone cannot reject it.
     """
@@ -141,7 +141,7 @@ def test_ink_results_carry_every_feature_m7_needs(processed: dict) -> None:
 
 
 def test_signature_crops_are_named_by_student_index(processed: dict) -> None:
-    """``outputs/cells/<date>/<index>.png`` — BUILD_SPEC.md section 5.4.
+    """``outputs/cells/<date>/<index>.png``, BUILD_SPEC.md section 5.4.
 
     ``investigate.py`` counts a student's samples by globbing this exact name.
     Named by row number instead, every student appears to have zero signatures
@@ -176,9 +176,9 @@ def test_every_student_gets_exactly_one_record(processed: dict) -> None:
 def test_a_dense_cell_is_never_reported_as_certain(processed: dict) -> None:
     """Ink that fills its box is not signature-shaped, so do not claim certainty.
 
-    The one cell the decision rule gets wrong across all five sheets —
+    The one cell the decision rule gets wrong across all five sheets,
     ``05.07.2019 / 10009303``, a stray red tick sitting under an overflowing
-    signature — used to be reported present at confidence 1.00, so it never
+    signature: used to be reported present at confidence 1.00, so it never
     reached the summary's Uncertain count and nobody would have looked at it.
     """
     by_index = {r.cell.student_index: r for r in processed["ink"]}
@@ -198,5 +198,5 @@ def test_binary_keeps_the_ink_is_white_convention(processed: dict) -> None:
 
     ink_fraction = float((binary > 0).mean())
     assert 0.005 < ink_fraction < 0.40, (
-        f"{ink_fraction:.1%} of the page is ink — the polarity is probably inverted"
+        f"{ink_fraction:.1%} of the page is ink; the polarity is probably inverted"
     )

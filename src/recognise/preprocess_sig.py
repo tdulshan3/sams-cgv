@@ -34,7 +34,7 @@ def trim_to_ink(mask: np.ndarray, pad: int = 0) -> tuple[np.ndarray, tuple[int, 
     A tuple of the trimmed mask and the bounding box used, as
     ``(x, y, w, h)`` in the input image's coordinates. If ``mask`` has no
     ink at all, the mask is returned unchanged and the box covers the
-    whole image — there is nothing to trim to, and callers should treat
+    whole image: there is nothing to trim to, and callers should treat
     an all-blank input as a "no signature here" signal rather than a crash.
     """
     ys, xs = np.nonzero(mask)
@@ -81,8 +81,8 @@ def centre_by_mass(mask: np.ndarray, canvas_size: tuple[int, int]) -> np.ndarray
 
     Two identical signatures placed at different starting positions inside
     their cell would otherwise score as dissimilar on a pixel-level
-    comparison such as SSIM. Centring by centre of mass — rather than by
-    bounding-box centre — is more stable for signatures, since a long trailing
+    comparison such as SSIM. Centring by centre of mass, rather than by
+    bounding-box centre, is more stable for signatures, since a long trailing
     flourish can skew a bounding-box centre far from where most of the ink
     actually sits.
     """
@@ -128,7 +128,7 @@ def resize_keep_aspect(mask: np.ndarray, target_size: tuple[int, int]) -> np.nda
         ``(width, height)`` of the box the result must fit inside.
 
     A student who signs small and a student who signs large must not be
-    told apart by size alone once normalised — but stretching width and
+    told apart by size alone once normalised, but stretching width and
     height independently would also warp the *shape* of every stroke, which
     is exactly what the shape-based features are supposed to measure. So the
     scale factor is the same in both directions, chosen so the longer side
@@ -153,7 +153,7 @@ def normalise_signature(mask: np.ndarray, size: tuple[int, int] = config.SIG_NOR
     Trims to the ink bounding box, scales the ink to fit ``size`` while
     keeping its aspect ratio, then centres it on a canvas of exactly
     ``size`` by centre of mass. The result always has shape
-    ``(size[1], size[0])`` regardless of the input's shape — that guarantee
+    ``(size[1], size[0])`` regardless of the input's shape; that guarantee
     is what lets ``matcher.compare`` treat every pair of signatures as
     directly comparable arrays.
 
@@ -162,7 +162,7 @@ def normalise_signature(mask: np.ndarray, size: tuple[int, int] = config.SIG_NOR
     mask:
         Ink mask, ink = 255, background = 0. A colour crop must be turned
         into a mask (M6's ``ink_mask`` / M4's ``clean_signature_crop``)
-        before it reaches this function — normalisation only handles shape,
+        before it reaches this function, normalisation only handles shape,
         not colour.
     size:
         ``(width, height)`` of the output box. Defaults to

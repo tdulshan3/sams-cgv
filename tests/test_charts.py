@@ -71,7 +71,7 @@ def test_empty_state_no_crash(db):
 
 
 def test_dates_ordered_chronologically(populated_db):
-    """Dates are ordered chronologically — assert 05.07.2019 comes after 21.06.2019."""
+    """Dates are ordered chronologically; assert 05.07.2019 comes after 21.06.2019."""
     records = populated_db.get_attendance("10000001")
     
     assert len(records) == 2

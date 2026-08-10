@@ -1,7 +1,7 @@
 """Central configuration.
 
 Every tunable number in SAMS lives here. No module hard-codes a threshold, a
-kernel size or a path — it imports the name from this file. That is what makes
+kernel size or a path; it imports the name from this file. That is what makes
 the prototype adjustable without hunting through nine people's code, and it is
 what lets the report state each parameter and its value in one table.
 
@@ -71,7 +71,7 @@ STEP_IMAGE_MAX_WIDTH = 1400
 
 The source photos are 3024 x 4032. Writing eight full size PNGs per sheet costs
 tens of megabytes and adds seconds to every run, and nobody reads a step image
-at full resolution — it goes in the report at a few inches wide.
+at full resolution: it goes in the report at a few inches wide.
 """
 
 UNCERTAIN_BELOW = 0.60
@@ -137,7 +137,7 @@ SHADOW_KERNEL = 25
 
 CONTRAST_METHOD = "clahe"
 """Which of ``enhance_contrast``'s three methods ``EnhanceStage`` uses by
-default. CLAHE beats global histogram equalisation on a mostly-white page —
+default. CLAHE beats global histogram equalisation on a mostly-white page,
 see T4."""
 
 CLAHE_CLIP, CLAHE_GRID = 1.5, (8, 8)
@@ -159,15 +159,15 @@ for the measurements behind this choice."""
 
 THRESHOLD_GLOBAL_VALUE = 127
 """Fixed cut-off for ``threshold_global``. Kept as a deliberate failure
-exhibit — see ``m4_global_failure.png`` — not as something worth tuning."""
+exhibit: see ``m4_global_failure.png``, not as something worth tuning."""
 
 ADAPTIVE_BLOCK, ADAPTIVE_C = 41, 12
 """``threshold_adaptive`` neighbourhood size (must be odd) and constant
 subtracted from the local mean/gaussian before comparing.
 
 Swept block 15-51 against c 5-15 on all five sheets (T3). The result is a
-broad plateau rather than a sharp optimum — across the whole grid ink
-coverage moves only between 7.6% and 10.0% — so these two numbers are
+broad plateau rather than a sharp optimum, across the whole grid ink
+coverage moves only between 7.6% and 10.0%, so these two numbers are
 chosen to avoid the edges of that plateau rather than to chase a peak:
 
 - ``c = 5`` is a cliff, not a slope: component count jumps from ~400 to
@@ -188,7 +188,7 @@ SAUVOLA_K, SAUVOLA_R = 0.2, 128.0
 the local mean) and ``r`` (the dynamic range of the data).
 
 ``r`` must be passed explicitly. Left to infer it, scikit-image takes it from
-the array's dtype limits, and for a float array those are ``(-1, 1)`` — so
+the array's dtype limits, and for a float array those are ``(-1, 1)``, so
 ``r`` becomes 1.0 rather than ~128, the local threshold lands around 1000 on
 0-255 data, and every pixel falls below it. The whole page comes out as ink."""
 
@@ -205,7 +205,7 @@ climbs:
         2 / 5     8.96          287
         3 / 7     9.38          174
 
-Falling components with *rising* ink is not cleaning — it is separate
+Falling components with *rising* ink is not cleaning; it is separate
 objects being welded into one. By kernel 7 more than half the components on
 the page have merged into a neighbour, and on a signing sheet the nearest
 neighbour of a signature is the printed table border it sits against. M6
@@ -281,7 +281,7 @@ BAND_GAP_THRESHOLD = 40
 """Pixel gap that splits horizontal lines into candidate table bands.
 
 Retained for the two-tables report figure only. Table *selection* uses row
-regularity instead — on this sheet the rows are ~44 px apart and the gap above
+regularity instead: on this sheet the rows are ~44 px apart and the gap above
 the table is ~64 px, so no single threshold separates them."""
 
 TABLE_SPAN_TOLERANCE = 12
@@ -322,7 +322,7 @@ DENSE_FILL_RATIO = 0.70
 """Ink filling this much of its own bounding box stops being signature-shaped.
 
 A signature is a thin stroke crossing a wide box, so it fills a modest
-fraction of it — across the 25 genuine signatures the mean is 0.36. Ink that
+fraction of it: across the 25 genuine signatures the mean is 0.36. Ink that
 fills most of the box is a written word, a smudge, or a neighbour's signature
 bleeding through the row border.
 
@@ -346,12 +346,12 @@ a human is pointed at it."""
 INK_RATIO_THRESHOLD = 0.036
 """Ink coverage a signature cell must reach before it counts as signed.
 
-Measured, not chosen — ``python tools/tune_threshold.py`` sweeps this against
+Measured, not chosen, ``python tools/tune_threshold.py`` sweeps this against
 the 30 hand-labelled cells in ``data/ground_truth.csv``. The sweep has no peak,
 it has a plateau: every value between the highest genuinely-blank cell (0.0173,
 05.07.2019 / 10009301) and the lowest real signature (0.0546, 12.07.2019 /
 10009302) scores identically, because no cell lies between them. This is the
-midpoint of that plateau — the value furthest from being wrong about any cell
+midpoint of that plateau, the value furthest from being wrong about any cell
 we have actually seen."""
 
 MAX_INK_RATIO = 0.55
@@ -359,7 +359,7 @@ MAX_INK_RATIO = 0.55
 
 The one rule here fitted to a single example, so it is flagged rather than
 buried. On 21.06.2019 the lecturer marked 10009306 absent by ruling a line
-across the box and writing ``ab`` on it, which covers 74% of the cell — where
+across the box and writing ``ab`` on it, which covers 74% of the cell, where
 the largest genuine signature in the data covers 37%. A signature is strokes
 on paper, not a filled box, so an upper bound is the right *shape* of rule; but
 with one supporting cell the honest claim is that it catches this convention on
@@ -370,11 +370,11 @@ MIN_COMPONENTS = 1
 """Connected components a signature must have. Zero means the cell is blank."""
 
 MIN_STROKE_LENGTH = 100
-"""Skeleton pixels a signature must have — how far the pen actually travelled.
+"""Skeleton pixels a signature must have, how far the pen actually travelled.
 
 Guards the case ink ratio alone cannot: a short thick mark can cover as many
 pixels as a thin sprawling signature, so coverage on its own would accept it.
-Measured the same way as the ink threshold — every genuine signature in the 30
+Measured the same way as the ink threshold; every genuine signature in the 30
 cells has a skeleton of at least 132 pixels, the faint marks on 05.07.2019 /
 10009301 reach 60, and 100 sits between them."""
 
@@ -392,7 +392,7 @@ SIG_NORM_SIZE = (220, 120)
 """Fixed (width, height) every signature is normalised to before comparison.
 
 Two signatures cannot be compared until they sit in the same box at the same
-scale — this is the box.
+scale: this is the box.
 """
 
 SIG_NORM_PAD = 10
@@ -408,12 +408,12 @@ ORB_LOWE_RATIO = 0.75
 """Lowe's ratio test threshold for accepting an ORB keypoint match as good."""
 
 SCORE_WEIGHTS = {"ssim": 0.30, "hog": 0.30, "hu": 0.10, "orb": 0.15, "custom": 0.15}
-"""Weights for the combined score. Must sum to 1.0 — justified in T5 by which
+"""Weights for the combined score. Must sum to 1.0, justified in T5 by which
 feature separates genuine from impostor pairs best.
 """
 
 MATCH_THRESHOLD = 0.402
-"""Combined score above this is a match. Set from the EER experiment in T5 —
+"""Combined score above this is a match. Set from the EER experiment in T5,
 never guessed.
 """
 

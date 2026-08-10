@@ -1,7 +1,7 @@
 """The OOP backbone of the pipeline.
 
-Every processing step in SAMS — straightening the photo, enhancing it,
-binarising it, finding the table, measuring ink, deciding attendance — is a
+Every processing step in SAMS, straightening the photo, enhancing it,
+binarising it, finding the table, measuring ink, deciding attendance, is a
 subclass of :class:`Stage`. That gives us one uniform way to run a step, time
 it, report which step failed, and collect the pictures it produced for the
 step-by-step viewer the brief asks for.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""SAMS — read a signing sheet photo and work out who was present.
+"""SAMS, read a signing sheet photo and work out who was present.
 
-The first of the three commands the coursework brief fixes::
+The first of the three commands the coursework brief fixes:
 
     python sams.py data/sheets/12.07.2019.png data/info.xml
 
@@ -40,12 +40,12 @@ MAX_SUMMARY_WARNINGS = 5
 """Warnings listed in full before the rest are counted instead."""
 
 STAGES: list[Callable[[], Stage]] = [
-    GeometryStage,        # M2 — real, merged in #8
-    EnhanceStage,         # M3 — real, merged in #9
-    BinarizeStage,        # M4 — real, merged in #10
-    TableStage,           # M5 — real, merged in #11
-    InkStage,             # M6 — real, src.detect.ink_mask
-    DecisionStage,        # M7 — real, src.detect.presence
+    GeometryStage,        # M2, real, merged in #8
+    EnhanceStage,         # M3, real, merged in #9
+    BinarizeStage,        # M4, real, merged in #10
+    TableStage,           # M5, real, merged in #11
+    InkStage,             # M6, real, src.detect.ink_mask
+    DecisionStage,        # M7, real, src.detect.presence
 ]
 
 """The pipeline, in the fixed order from BUILD_SPEC.md section 6.3.
@@ -87,7 +87,7 @@ class RunSummary:
     def uncertain(self) -> int:
         """Records a human should check, by :data:`src.config.UNCERTAIN_BELOW`.
 
-        These are counted as present or absent as well — the number is a
+        These are counted as present or absent as well; the number is a
         prompt to look, not a third verdict.
         """
         return sum(
@@ -130,7 +130,7 @@ def load_students(xml_path: Path) -> tuple[list[Student], str]:
     Returns:
         The students in sheet row order, and the subject code. The code is
         carried on :class:`~src.models.SheetMeta` so the decision stage can
-        store it against the sheet — read the roll alone and every row in the
+        store it against the sheet, read the roll alone and every row in the
         ``sheets`` table ends up with an empty ``subject_code``.
     """
     from src.io.xml_parser import parse_info
@@ -172,7 +172,7 @@ def validate_paths(image: Path, xml: Path) -> None:
     """Stop with a clear message if either input is not a readable file.
 
     A mistyped filename is a user mistake, not a bug, so it gets one line of
-    plain English and a hint — never a traceback. Section 10 of the spec.
+    plain English and a hint, never a traceback. Section 10 of the spec.
 
     Raises:
         SystemExit: With code 2, the conventional exit code for a usage error.

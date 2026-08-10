@@ -6,17 +6,17 @@ is enough alone:
 * SSIM sees overall shape agreement, but is thrown off by a small shift or
   rotation that ``preprocess_sig.normalise_signature`` doesn't fully absorb.
 * HOG catches the direction strokes travel in, independent of exact position.
-* Hu moments describe shape while ignoring size and rotation — good at
+* Hu moments describe shape while ignoring size and rotation; good at
   catching "this is a completely different loop pattern", weak at catching
   fine stroke detail.
-* ORB catches loops and crossings — where pen paths cross themselves — which
+* ORB catches loops and crossings, where pen paths cross themselves, which
   none of the others look at directly.
 * ``shape_stats`` is this project's own hand-made feature set: density,
   aspect, stroke length, how many enclosed loops, and where the ink sits.
 
 Every ``*_similarity`` function in this module returns a score in ``[0, 1]``
 where ``1`` means identical. ``matcher.compare`` combines the five into one
-weighted score — see ``config.SCORE_WEIGHTS``.
+weighted score: see ``config.SCORE_WEIGHTS``.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def _clip01(score: float) -> float:
     similarity of non-negative vectors, a ``1 / (1 + distance)`` conversion).
     This is the explicit safety net for the ones that don't: notably
     :func:`orb_similarity`, where ``knnMatch`` is not one-to-one and a good
-    match count can — in a real, observed case, not just in theory — exceed
+    match count can: in a real, observed case, not just in theory, exceed
     the smaller keypoint count it's divided by. Every ``*_score`` /
     ``*_similarity`` function in this module routes its return value through
     here, so nothing downstream in ``matcher.compare`` has to defend against
@@ -62,7 +62,7 @@ def ssim_similarity(a: np.ndarray, b: np.ndarray) -> float:
     -------
     A score in ``[0, 1]``. ``structural_similarity`` itself returns a value
     in ``[-1, 1]`` (negative only for strongly anti-correlated images, which
-    two ink masks essentially never are) — clipped here so every feature in
+    two ink masks essentially never are), clipped here so every feature in
     this module shares the same range, which is what lets
     ``matcher.compare`` combine them with a plain weighted sum.
     """
@@ -76,7 +76,7 @@ def ssim_similarity(a: np.ndarray, b: np.ndarray) -> float:
 def hog_vector(norm: np.ndarray) -> np.ndarray:
     """Histogram-of-oriented-gradients descriptor of a normalised signature.
 
-    HOG summarises which direction the ink travels in, cell by cell — it is
+    HOG summarises which direction the ink travels in, cell by cell; it is
     sensitive to stroke *direction* in a way pixel-level SSIM is not, which
     is what makes it catch a signature whose overall silhouette is similar
     but whose strokes actually run a different way (a mismatch SSIM alone
@@ -84,7 +84,7 @@ def hog_vector(norm: np.ndarray) -> np.ndarray:
 
     Parameters use ``config.HOG_ORIENTATIONS``, ``config.HOG_PPC`` and
     ``config.HOG_CPB``, so the descriptor length only changes if those
-    change — kept centralised for the same reason every other tunable is.
+    change: kept centralised for the same reason every other tunable is.
     """
     vector = hog(
         norm,
@@ -100,7 +100,7 @@ def hog_similarity(a: np.ndarray, b: np.ndarray) -> float:
     """Cosine similarity between two signatures' HOG descriptors.
 
     HOG vectors are non-negative (they are histograms), so their cosine
-    similarity already falls in ``[0, 1]`` — no conversion needed, unlike a
+    similarity already falls in ``[0, 1]``, no conversion needed, unlike a
     signed distance. A zero-norm vector (a totally blank normalised image,
     e.g. comparing against an empty cell) has no defined direction, so that
     case returns ``0.0`` rather than dividing by zero.
@@ -117,15 +117,15 @@ def hu_moments(norm: np.ndarray) -> np.ndarray:
     """Log-scaled Hu moments of a normalised signature.
 
     Hu moments describe shape in a way that is invariant to translation,
-    scale and rotation — useful here specifically because it catches gross
+    scale and rotation: useful here specifically because it catches gross
     shape differences (a completely different loop layout) even if
     ``normalise_signature`` left a slight scale or rotation mismatch that
     would otherwise confuse a pixel-level feature.
 
     Raw Hu moments span many orders of magnitude (roughly ``1e-1`` to
     ``1e-15``), which would let the smallest moment be swamped by
-    floating-point noise in any plain distance. The standard fix — used
-    here — is a sign-preserving log: ``-sign(h) * log10(|h|)``. A moment
+    floating-point noise in any plain distance. The standard fix, used
+    here: is a sign-preserving log: ``-sign(h) * log10(|h|)``. A moment
     that is exactly zero stays zero rather than producing ``-inf``.
     """
     moments = cv2.moments(norm)
@@ -142,7 +142,7 @@ def hu_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
     The raw comparison is a distance (0 = identical shape, growing with
     difference), so it is converted to a ``[0, 1]`` similarity with
-    ``1 / (1 + distance)`` — the standard distance-to-similarity conversion
+    ``1 / (1 + distance)``; the standard distance-to-similarity conversion
     used throughout this module, chosen because it maps 0 to exactly 1.0
     and decays smoothly rather than needing a hand-picked cap.
     """
@@ -154,13 +154,13 @@ def orb_keypoints(norm: np.ndarray) -> tuple[list[cv2.KeyPoint], np.ndarray | No
     """ORB keypoints and descriptors of a normalised signature.
 
     ORB catches something the other four features do not: loops and
-    crossings — the specific points where a pen path crosses itself or
+    crossings: the specific points where a pen path crosses itself or
     curls back. Two signatures that look similar in overall shape but differ
     in exactly where their loops are (a common way a forger's copy fails)
     show up here even when SSIM and Hu moments are fooled.
 
     Returns ``(keypoints, descriptors)``. ``descriptors`` is ``None`` when
-    ORB finds nothing to describe — an almost blank normalised image has no
+    ORB finds nothing to describe; an almost blank normalised image has no
     corners for it to detect, and that is a valid outcome, not an error.
     """
     orb = cv2.ORB_create(nfeatures=config.ORB_N_FEATURES)
@@ -173,7 +173,7 @@ def orb_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
     Every keypoint in ``a`` is matched against its two nearest neighbours in
     ``b``. A match only counts as "good" when the best neighbour is
-    meaningfully closer than the second-best (``config.ORB_LOWE_RATIO``) —
+    meaningfully closer than the second-best (``config.ORB_LOWE_RATIO``);
     that is Lowe's ratio test, and it exists because with descriptors this
     short, plenty of points have an equally-good runner-up purely by chance;
     keeping only matches where one candidate clearly wins is what makes the
@@ -182,7 +182,7 @@ def orb_similarity(a: np.ndarray, b: np.ndarray) -> float:
     The result is good matches divided by the smaller of the two keypoint
     counts, so a signature that is a strict subset of another's strokes (or
     vice versa) doesn't get penalised just for having fewer points to offer.
-    Returns ``0.0`` whenever either signature has no descriptors at all —
+    Returns ``0.0`` whenever either signature has no descriptors at all;
     there is nothing to match, which is a real answer, not missing data.
     """
     _, desc_a = orb_keypoints(a)
@@ -205,34 +205,34 @@ def orb_similarity(a: np.ndarray, b: np.ndarray) -> float:
     smaller_side = min(len(desc_a), len(desc_b))
     if not smaller_side:
         return 0.0
-    # `knnMatch` is not one-to-one — several `desc_a` points can each pick
-    # the same `desc_b` neighbour — so `good` is not actually bounded by
+    # `knnMatch` is not one-to-one, several `desc_a` points can each pick
+    # the same `desc_b` neighbour, so `good` is not actually bounded by
     # `smaller_side` and this ratio can exceed 1.0 in practice, not just in
     # theory. `_clip01` is load-bearing here, not decorative.
     return _clip01(good / smaller_side)
 
 
 def shape_stats(norm: np.ndarray) -> dict:
-    """This project's own hand-made feature set — no library does the
+    """This project's own hand-made feature set; no library does the
     combining here, only individual building blocks (moments, skeletonize).
 
     Measures six things about the ink itself, each catching something the
     library features don't look at directly:
 
-    * ``ink_density`` — ink pixels over total pixels. A hurried scrawl and a
+    * ``ink_density``, ink pixels over total pixels. A hurried scrawl and a
       careful signature can have the same silhouette but very different
       density.
-    * ``aspect`` — width over height of the ink's own bounding box (not the
-      canvas — the canvas is always the same shape after normalisation).
-    * ``stroke_length`` — pixels in the skeletonised stroke: how far the pen
+    * ``aspect``, width over height of the ink's own bounding box (not the
+      canvas: the canvas is always the same shape after normalisation).
+    * ``stroke_length``, pixels in the skeletonised stroke: how far the pen
       actually travelled, independent of how thick the ink is.
-    * ``euler_number`` — connected components minus enclosed loops. A
+    * ``euler_number``, connected components minus enclosed loops. A
       signature with a looped ``l`` or a crossed ``t`` has a different Euler
       number to one without, regardless of overall shape.
-    * ``centre_of_mass`` — where the ink sits within the normalised canvas,
+    * ``centre_of_mass``; where the ink sits within the normalised canvas,
       as an ``(x, y)`` fraction, so it's comparable however big the canvas is.
-    * ``slant_angle`` — the dominant tilt of the ink, in radians, from the
-      image's own second moments — the same idea handwriting analysts call
+    * ``slant_angle``, the dominant tilt of the ink, in radians, from the
+      image's own second moments, the same idea handwriting analysts call
       slant.
 
     Also returns the raw ``h_profile`` / ``v_profile`` projection profiles
@@ -278,10 +278,10 @@ def shape_stats(norm: np.ndarray) -> dict:
 def _scalar_stats_similarity(stats_a: dict, stats_b: dict) -> float:
     """Similarity from the six scalar/tuple entries of :func:`shape_stats`.
 
-    Each sub-score uses whichever conversion suits its own units — a plain
+    Each sub-score uses whichever conversion suits its own units, a plain
     ``1/(1+distance)`` for unbounded values, a relative difference for
     values with a natural scale, and wrap-around handling for the slant
-    angle (91 degrees and -89 degrees are one degree apart, not 180) —
+    angle (91 degrees and -89 degrees are one degree apart, not 180);
     then all six are averaged with equal weight.
     """
     a_density, b_density = stats_a["ink_density"], stats_b["ink_density"]
@@ -310,14 +310,14 @@ def _profile_correlation(profile_a: np.ndarray, profile_b: np.ndarray) -> float:
     """Pearson correlation between two projection profiles, mapped to ``[0, 1]``.
 
     A projection profile (ink pixels summed per row, or per column) is a
-    shape in its own right — two signatures with the same scalar stats can
+    shape in its own right, two signatures with the same scalar stats can
     still distribute their ink very differently along one axis (e.g. a flat
     scrawl versus one with a tall looping capital), and correlation is
     sensitive to exactly that kind of shape agreement in a way none of
     :func:`shape_stats`'s six scalar numbers are.
 
     Correlation is undefined when a profile has zero variance (a blank
-    normalised image, or — in principle — a perfectly flat one). Two blank
+    normalised image, or, in principle, a perfectly flat one). Two blank
     profiles are trivially identical, so that pair returns ``1.0``; a blank
     against a non-blank profile has nothing in common to correlate, so that
     returns ``0.0`` rather than raising on the division by zero.
@@ -336,7 +336,7 @@ def _profile_correlation(profile_a: np.ndarray, profile_b: np.ndarray) -> float:
 
 
 def custom_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    """This project's own similarity score — the ``shape_stats`` feature.
+    """This project's own similarity score, the ``shape_stats`` feature.
 
     Combines two things in equal measure:
 
@@ -348,7 +348,7 @@ def custom_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
     Equal weighting between "single numbers about the ink" and "where the
     ink actually sits along each axis" is a design choice, not a measured
-    one — T5's feature-separation report is what actually justifies (or
+    one: T5's feature-separation report is what actually justifies (or
     revises) it, the same way it justifies ``config.SCORE_WEIGHTS`` overall.
     """
     stats_a, stats_b = shape_stats(a), shape_stats(b)

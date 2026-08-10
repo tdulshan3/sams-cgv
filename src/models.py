@@ -59,7 +59,7 @@ class Cell:
     col: int
     """Column: ``0=No, 1=Student No, 2=Title, 3=Student Name, 4=Signature``.
 
-    Measured in task T0 — the real sheet carries a ``Title`` column that the
+    Measured in task T0; the real sheet carries a ``Title`` column that the
     first draft of the spec did not know about, which is why the signature
     column is 4 and not 3. Use :data:`src.config.SIGNATURE_COL`, never a
     literal.
@@ -101,13 +101,13 @@ class InkResult:
     """Width over height of :attr:`stroke_bbox`. Signatures are wide, ticks are not."""
 
     stroke_length: int = 0
-    """Pixels in the skeletonised stroke — how much pen travelled, not how thick."""
+    """Pixels in the skeletonised stroke, how much pen travelled, not how thick."""
 
     filled_ratio: float = 0.0
     """Ink pixels divided by :attr:`stroke_bbox` area, in ``[0, 1]``.
 
-    How solidly the ink fills its own bounding box. A signature is sparse — a
-    thin line wandering through a wide box — while a written word, a smudge or
+    How solidly the ink fills its own bounding box. A signature is sparse, a
+    thin line wandering through a wide box, while a written word, a smudge or
     a tick is dense. On ``21.06.2019`` the lecturer's handwritten ``ab`` has a
     *higher* ink ratio than any real signature on any sheet, so ink ratio alone
     cannot reject it. This is one of the two features that can.

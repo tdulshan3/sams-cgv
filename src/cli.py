@@ -2,13 +2,13 @@
 
 ``sams.py``, ``infovis.py`` and ``investigate.py`` are deliberately thin: parse
 arguments, check them, hand over to a module. What they must all do identically
-is fail — same wording, same exit codes, same hints — so a marker who mistypes
+is fail: same wording, same exit codes, same hints, so a marker who mistypes
 an index in one command already knows what the other two will say.
 
 Exit codes follow section 10 of the spec:
 
-* ``0`` — it worked, or there was simply nothing to do
-* ``2`` — the user made a mistake: missing file, unknown index, empty database
+* ``0``, it worked, or there was simply nothing to do
+* ``2``, the user made a mistake: missing file, unknown index, empty database
 
 A missing module is **not** an error while the project is being built. It
 prints *module not ready yet* and exits 0, so the group can demonstrate the
@@ -53,9 +53,9 @@ def not_ready(module: str, owner: str) -> int:
         owner: Who is writing it, e.g. ``"M9"``.
 
     Returns:
-        ``0`` — an unwritten module is a schedule fact, not a failure.
+        ``0``; an unwritten module is a schedule fact, not a failure.
     """
-    print(f"{owner} module not ready yet — this command will work once {module} lands")
+    print(f"{owner} module not ready yet; this command will work once {module} lands")
     return 0
 
 
@@ -69,7 +69,7 @@ def optional_import(path: str, attribute: str) -> Callable[..., Any] | None:
     Returns:
         The function, or ``None`` when the module or the function is missing.
         Only :class:`ImportError` and :class:`AttributeError` are treated as
-        *not written yet* — a module that exists and raises on import is a real
+        *not written yet*: a module that exists and raises on import is a real
         bug and is allowed to propagate.
     """
     try:
@@ -109,8 +109,8 @@ def _looks_like_an_index(stem: str) -> bool:
 
     The folder also holds ``<index>_mask.png`` beside each crop, and falls back
     to ``row_<n>.png`` when no roll was available to name the crops from. Left
-    unfiltered, both end up offered to the user as valid student indices —
-    ``unknown student index '001'. valid indices: row_0, row_0_mask, …`` — which
+    unfiltered, both end up offered to the user as valid student indices,
+    ``unknown student index '001'. valid indices: row_0, row_0_mask, …``, which
     is worse than offering none.
     """
     return stem.isdigit()
@@ -164,8 +164,8 @@ def require_database() -> None:
 def signature_samples(index: str) -> list[str]:
     """Sheet dates on which a signature crop was saved for this student.
 
-    The crops live at ``outputs/cells/<sheet_date>/<index>.png`` — section 5.4
-    of the spec — so counting them needs no database and no other module.
+    The crops live at ``outputs/cells/<sheet_date>/<index>.png``, section 5.4
+    of the spec: so counting them needs no database and no other module.
     ``investigate.py`` uses it to say *there is only one signature, there is
     nothing to compare* before M8's matcher is even asked.
     """

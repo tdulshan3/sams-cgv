@@ -1,4 +1,4 @@
-"""Tests for M5 — Table Detection.
+"""Tests for M5, Table Detection.
 
 Covers:
   - line_detect: morphology masks, projection profile peaks, merge logic

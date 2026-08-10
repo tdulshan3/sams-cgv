@@ -1,4 +1,4 @@
-# M9 — Visualisation & QA
+# M9: Visualisation & QA
 
 Individual contribution notes.
 
@@ -9,7 +9,7 @@ that proves the whole system works on all five sheets.
 
 | File | What it does |
 |---|---|
-| `src/viz/charts.py` | `AttendanceCharts` — timeline, donut, dashboard, heat map, sheet totals, distribution |
+| `src/viz/charts.py` | `AttendanceCharts`, timeline, donut, dashboard, heat map, sheet totals, distribution |
 | `src/viz/style.py` | One house style every chart in the project uses |
 | `tools/run_all_sheets.py` | Wipes the database, runs all five sheets, reports accuracy |
 | `tools/make_report_assets.py` | Regenerates every figure in the project in one command |
@@ -20,7 +20,7 @@ is judged on more than whether a bar chart appeared.
 
 ## Choosing the chart, not just drawing one
 
-The data is 6 students × 5 sheets = 30 cells, and attendance is high — 25 of
+The data is 6 students × 5 sheets = 30 cells, and attendance is high; 25 of
 the 30 are present. That shape decided every chart:
 
 * **The heat map is the main one.** Two categories at once, students against
@@ -28,7 +28,7 @@ the 30 are present. That shape decided every chart:
   class and the whole term in one glance and can find both the absent student
   and the difficult sheet.
 * **A timeline for one student**, because the question there is order over
-  time — did they stop attending, or miss one week?
+  time: did they stop attending, or miss one week?
 * **A donut for the percentage**, with the class average drawn alongside. A
   number without a comparison is not a visualisation; 80% means nothing until
   you know the class sits at 83%.
@@ -47,7 +47,7 @@ absent differ by position and shape as well as hue, and the palette in
 `style.py` is applied once for every chart in the project so the report looks
 like one system rather than nine.
 
-## QA — what the runs revealed
+## QA: what the runs revealed
 
 `tools/run_all_sheets.py` resets the database, processes all five sheets,
 catches failures per sheet and reports accuracy against `data/ground_truth.csv`:
@@ -72,11 +72,11 @@ overflows into the row below and contaminates its neighbour.
 
 ## Evidence
 
-* `m9_dashboard_example.png` — the full `infovis.py <index>` dashboard
-* `m9_class_heatmap.png` — students × dates
-* `m9_attendance_distribution.png` — spread across all students
-* `m9_accuracy_report.png` — accuracy per sheet with the error count
-* `m9_chart_type_choice.png` — the same data as a pie, a bar and a timeline, showing why the choice was made rather than assumed
+* `m9_dashboard_example.png`, the full `infovis.py <index>` dashboard
+* `m9_class_heatmap.png`, students × dates
+* `m9_attendance_distribution.png`, spread across all students
+* `m9_accuracy_report.png`, accuracy per sheet with the error count
+* `m9_chart_type_choice.png`; the same data as a pie, a bar and a timeline, showing why the choice was made rather than assumed
 
 `python tools/make_report_assets.py` regenerates all 50 figures across the nine
 modules in one command, so a late parameter change does not mean re-taking

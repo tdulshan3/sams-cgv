@@ -5,7 +5,7 @@ of the stages and nothing else: it does not know what deskewing is, it does not
 know what ink is. That separation is what lets nine people replace one stage at
 a time without touching anything here.
 
-The order is fixed by BUILD_SPEC.md section 6.3::
+The order is fixed by BUILD_SPEC.md section 6.3:
 
     geometry -> enhance -> binarize -> table -> ink -> decision
 """
@@ -76,7 +76,7 @@ class Pipeline:
             keys are listed in BUILD_SPEC.md section 6.3.
 
         Raises:
-            PipelineError: If any stage raises. The run stops there — a half
+            PipelineError: If any stage raises. The run stops there; a half
                 processed sheet must never reach the database looking like a
                 real answer.
 
@@ -118,7 +118,7 @@ class Pipeline:
 
         A stage that produces no figure is normal and silent. A stage whose
         ``figures()`` raises is a bug in that stage, and it is reported as
-        such rather than being allowed to take the whole run down — the
+        such rather than being allowed to take the whole run down; the
         pictures are for the report, the attendance is the product.
         """
         if self.viewer is None:

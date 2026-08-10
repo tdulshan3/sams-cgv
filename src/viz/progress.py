@@ -1,7 +1,7 @@
 """Step-by-step progress viewer.
 
-The brief asks for the image processing to be *shown* as it happens — greyscale,
-binarisation and everything else — not just for a final answer. This class is
+The brief asks for the image processing to be *shown* as it happens, greyscale,
+binarisation and everything else, not just for a final answer. This class is
 how that happens. Each stage hands its pictures over as it finishes, the viewer
 keeps them in order, and at the end of the run it writes them out and puts them
 on screen as one montage.
@@ -140,7 +140,7 @@ class ProgressViewer:
         # the pipeline gains or loses a stage the new run writes a different
         # set of names and the old ones survive beside them. After the stubs
         # were replaced this left 02_warped, 03_grey and 04_binary sitting
-        # among the seventeen real steps — three pictures of a pipeline that no
+        # among the seventeen real steps, three pictures of a pipeline that no
         # longer exists, in the folder the report takes its screenshots from.
         for stale in self.output_dir.glob("*.png"):
             stale.unlink()
@@ -190,7 +190,7 @@ class ProgressViewer:
         """Downscale and normalise one step image for writing to disk.
 
         Full size step images are 3024 x 4032. Eight of those per sheet is tens
-        of megabytes nobody looks at — in the report each one is a few inches
+        of megabytes nobody looks at, in the report each one is a few inches
         wide. They are written at :data:`src.config.STEP_IMAGE_MAX_WIDTH`.
 
         Channel order is left exactly as it arrived, because ``cv2.imwrite``
@@ -304,7 +304,7 @@ class ProgressViewer:
             axis.axis("off")
 
         figure.suptitle(
-            f"SAMS processing steps — sheet {self.sheet_date}", fontsize=12
+            f"SAMS processing steps, sheet {self.sheet_date}", fontsize=12
         )
         figure.tight_layout()
         return figure

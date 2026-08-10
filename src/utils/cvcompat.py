@@ -4,12 +4,12 @@ We pin ``opencv-python`` 5. Several OpenCV functions that returned an
 ``(N, 1, K)`` array in version 4 return ``(N, K)`` in version 5, and almost
 every tutorial, Stack Overflow answer and textbook example on the internet was
 written against version 4. The result is code that looks right, passes a
-synthetic unit test, and dies on the first real image::
+synthetic unit test, and dies on the first real image:
 
     for x1, y1, x2, y2 in lines[:, 0]:
         TypeError: cannot unpack non-iterable numpy.int32 object
 
-This has already cost the group two modules — M2 in PR #3 and M5 in PR #11,
+This has already cost the group two modules, M2 in PR #3 and M5 in PR #11,
 found only by running the pipeline on a real sheet. Rather than fix it a third
 time, call the wrappers here and never call the underlying function directly.
 ``tests/test_pipeline.py`` fails the build if anyone does.
@@ -49,7 +49,7 @@ def hough_line_segments(
 
     Returns:
         An ``(N, 4)`` array of ``x1, y1, x2, y2``, on every OpenCV version.
-        Empty when no lines are found — never ``None``.
+        Empty when no lines are found, never ``None``.
 
     Example:
         >>> for x1, y1, x2, y2 in hough_line_segments(binary):

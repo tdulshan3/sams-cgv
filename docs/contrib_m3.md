@@ -1,12 +1,12 @@
-# M3 — Greyscale & Enhancement
+# M3: Greyscale & Enhancement
 
 Individual contribution notes, per the coursework brief.
 
 ## What I built
 
 `src/preprocess/enhance.py`, the stage that turns `ctx["warped"]` (a flattened
-colour photo of the sheet) into `ctx["grey"]` — one channel, evenly lit,
-denoised — for M4's thresholding.
+colour photo of the sheet) into `ctx["grey"]`; one channel, evenly lit,
+denoised: for M4's thresholding.
 
 - `to_grey`: four conversion methods (`average`, `luminosity`, `lightness`,
   `max_channel`). `average` and `luminosity` are hand-written in NumPy rather
@@ -33,7 +33,7 @@ denoised — for M4's thresholding.
   `ctx["grey"]`.
 - **Bilateral filtering**: weighs neighbouring pixels by both spatial
   distance and intensity difference, so it smooths flat paper texture without
-  blurring across a strong edge such as a pen stroke boundary — unlike a
+  blurring across a strong edge such as a pen stroke boundary, unlike a
   gaussian blur, which treats every neighbour the same regardless of contrast.
 - **Shadow removal by background division**: dilating with a kernel wider
   than any pen stroke erases the strokes and leaves the paper's own lighting
@@ -47,7 +47,7 @@ denoised — for M4's thresholding.
   histogram, so the huge blank-paper spike gets stretched hard and its noise
   is amplified along with it. CLAHE equalises small tiles independently, so a
   quiet tile stays quiet and the stretching only fires where there is
-  something — ink — to bring out.
+  something: ink, to bring out.
 
 ## Problems and how I solved them
 
@@ -56,7 +56,7 @@ denoised — for M4's thresholding.
   levels visible on the phone photos it left the image almost untouched,
   which the synthetic-noise unit test caught immediately (`result.var() <
   noisy.var()` failed for nlmeans and only nlmeans). Fixed by adding
-  `NLMEANS_H = 10` to `config.py` and passing it through — the point of
+  `NLMEANS_H = 10` to `config.py` and passing it through, the point of
   "no tunable number hard-coded" is exactly to make a fix like this a one-line
   config change instead of a scavenger hunt.
 - **Shadow division alone does not reach the full 0–255 range.** Dividing by
@@ -69,10 +69,10 @@ denoised — for M4's thresholding.
   few tens of pixels on a side) rather than the flattened sheet, which would
   have made every M3 report figure a blank rectangle. Since `enhance.py`
   itself only reads `ctx["warped"]` and never calls the geometry code, the
-  enhancement chain itself is unaffected — but `tools/make_m3_figures.py`
+  enhancement chain itself is unaffected, but `tools/make_m3_figures.py`
   needed a source image, so it uses the same crude fractional crop
   `tools/make_fixtures.py` already relies on instead. Worth flagging to M1/M2
-  — the fallback is a one-line swap back to `GeometryStage` once that is
+; the fallback is a one-line swap back to `GeometryStage` once that is
   confirmed fixed.
 - **CLAHE's default clip limit amplifies paper texture as well as ink.**
   Swept `CLAHE_CLIP` from 1.0 to 4.0 against Otsu binarisation on all five
@@ -83,19 +83,19 @@ denoised — for M4's thresholding.
 
 ## Evidence
 
-- `outputs/figures/m3_greyscale_methods.png` — the four greyscale methods
+- `outputs/figures/m3_greyscale_methods.png`; the four greyscale methods
   side by side on one sheet.
-- `outputs/figures/m3_histograms.png` — pixel histogram before and after
+- `outputs/figures/m3_histograms.png`, pixel histogram before and after
   CLAHE on the same axes; the blank-paper spike does not get amplified the
   way it would under global equalisation.
-- `outputs/figures/m3_denoise_comparison.png` — four denoise methods, full
+- `outputs/figures/m3_denoise_comparison.png`, four denoise methods, full
   image and a zoomed signature crop; bilateral keeps stroke edges visibly
   sharper than gaussian or nlmeans at the same noise level.
-- `outputs/figures/m3_denoise_metrics.png` — PSNR and runtime bar charts.
+- `outputs/figures/m3_denoise_metrics.png`, PSNR and runtime bar charts.
   Bilateral has the best PSNR of the four; nlmeans is both the slowest and,
-  at its current settings, the weakest — an honest result, not the outcome I
+  at its current settings, the weakest, an honest result, not the outcome I
   expected going in.
-- `outputs/figures/m3_shadow_removal.png` — original, estimated background,
+- `outputs/figures/m3_shadow_removal.png`, original, estimated background,
   and flattened, on the sheet with the most visible lighting gradient.
-- `pytest tests/test_enhance.py -q` — 6 tests, covering the maths in §11 of
+- `pytest tests/test_enhance.py -q`, 6 tests, covering the maths in §11 of
   `BUILD_SPEC.md` plus the PSNR/runtime measurement.

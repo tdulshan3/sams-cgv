@@ -1,6 +1,6 @@
 """Line detection for the printed student table.
 
-Uses morphological filtering as the primary method — far more reliable than
+Uses morphological filtering as the primary method, far more reliable than
 Hough on printed ruled lines. Hough is kept as a secondary cross-check.
 
 Primary flow:

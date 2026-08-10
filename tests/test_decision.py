@@ -3,7 +3,7 @@
 The rule these exercise is the one that decides whether a real student is
 marked absent, so the cases here are deliberately the awkward ones: a cell just
 under the threshold, a smudge with plenty of blobs but no stroke behind them,
-and the lecturer's ruled-through ``ab``. Synthetic ``InkResult``s throughout —
+and the lecturer's ruled-through ``ab``. Synthetic ``InkResult``s throughout;
 the rule reads numbers, never pixels, so a test that loads a photo would be
 slower and prove less.
 """
@@ -48,7 +48,7 @@ def test_blank_cell_is_absent():
 
 
 def test_just_below_threshold_is_absent_with_low_confidence():
-    """A cell sitting on the threshold is called absent — and flagged as a close call.
+    """A cell sitting on the threshold is called absent, and flagged as a close call.
 
     Being unwilling to say 'I am not sure' is how a borderline cell gets
     silently mismarked, so confidence has to fall as the ink ratio approaches
@@ -73,7 +73,7 @@ def test_ink_that_is_not_a_signature_is_absent_but_uncertain():
 
     Ink coverage alone would call it present. The upper bound rejects it, and
     because the two conditions disagree the verdict is reported as the least
-    certain one we make — which is what puts it in front of a human.
+    certain one we make; which is what puts it in front of a human.
     """
     present, confidence = decide(make_ink(0.74, components=1, stroke_length=647))
     assert present is False
@@ -92,7 +92,7 @@ def test_sweep_rule_matches_decide():
 
     The thresholds are chosen by sweeping a re-implementation of the rule. If
     the two ever drift apart, the numbers in the report would describe a system
-    nobody is running — so this test pins them together.
+    nobody is running: so this test pins them together.
     """
     from tools.tune_threshold import CellSample, predict
 
@@ -149,7 +149,7 @@ def test_row_count_mismatch_warns_and_maps_what_it_can(caplog):
     """A missing row must not shift every student up one.
 
     If M5 finds five rows where the roll has six, the safe failure is five
-    correct records and a loud warning — not six records with five of them
+    correct records and a loud warning, not six records with five of them
     quietly attached to the wrong person.
     """
     cells = [Cell(row=row, col=config.SIGNATURE_COL, bbox=(0, 0, 10, 10)) for row in range(2)]

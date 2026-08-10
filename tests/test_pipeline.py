@@ -5,7 +5,7 @@ run in, whether a failure names the stage that caused it, whether the step
 images land where the report expects them, and whether a mistyped filename
 gives a message instead of a traceback.
 
-``matplotlib.use("Agg")`` before any pyplot import — the test run must never
+``matplotlib.use("Agg")`` before any pyplot import; the test run must never
 try to open a window.
 """
 
@@ -75,7 +75,7 @@ def a_sheet() -> SheetMeta:
 
 
 def test_pipeline_runs_stages_in_the_given_order() -> None:
-    """Spec section 11.1 — order is the runner's whole job."""
+    """Spec section 11.1; order is the runner's whole job."""
     ran: list[str] = []
     stages = [RecordingStage(name, ran) for name in ("geometry", "enhance", "binarize")]
 
@@ -86,7 +86,7 @@ def test_pipeline_runs_stages_in_the_given_order() -> None:
 
 
 def test_failing_stage_error_names_that_stage() -> None:
-    """Spec section 11.2 — with nine people's code, the name is the message."""
+    """Spec section 11.2, with nine people's code, the name is the message."""
     ran: list[str] = []
     stages = [RecordingStage("geometry", ran), FailingStage(), RecordingStage("ink", ran)]
 
@@ -100,7 +100,7 @@ def test_failing_stage_error_names_that_stage() -> None:
 
 
 def test_save_all_writes_numbered_files(tmp_path: Path) -> None:
-    """Spec section 11.3 — N files, numbered from 01, in order."""
+    """Spec section 11.3, N files, numbered from 01, in order."""
     viewer = ProgressViewer("12.07.2019", show=False, steps_root=tmp_path)
     for name in ("original", "warped", "grey", "binary"):
         viewer.add(name, np.zeros((12, 9, 3), np.uint8))
@@ -120,7 +120,7 @@ def test_save_all_writes_numbered_files(tmp_path: Path) -> None:
 
 
 def test_add_accepts_colour_and_single_channel_images() -> None:
-    """Spec section 11.4 — stages hand over both kinds."""
+    """Spec section 11.4, stages hand over both kinds."""
     viewer = ProgressViewer("12.07.2019", show=False, save=False)
     viewer.add("colour", np.zeros((10, 10, 3), np.uint8))
     viewer.add("grey", np.zeros((10, 10), np.uint8))
@@ -135,7 +135,7 @@ def test_add_accepts_colour_and_single_channel_images() -> None:
 
 
 def test_sams_exits_with_code_2_when_the_image_is_missing() -> None:
-    """Spec section 11.5 — a user mistake, so a message and no traceback."""
+    """Spec section 11.5, a user mistake, so a message and no traceback."""
     result = subprocess.run(
         [sys.executable, "sams.py", "no_such_sheet.png", "data/info.xml"],
         cwd=REPO_ROOT,
@@ -149,7 +149,7 @@ def test_sams_exits_with_code_2_when_the_image_is_missing() -> None:
 
 
 def test_student_index_keeps_its_leading_zeros() -> None:
-    """Spec section 11.6 — the single most damaging thing to get wrong."""
+    """Spec section 11.6, the single most damaging thing to get wrong."""
     student = Student("007", "James Bond")
 
     assert student.index == "007"

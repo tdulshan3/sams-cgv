@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare one student's signatures across sheets and report a mismatch.
 
-The third of the three commands the coursework brief fixes::
+The third of the three commands the coursework brief fixes:
 
     python investigate.py 10000409
 
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     # when "001" is not a real student index in info.xml. Use resolve_index
     # only when the raw input already matches a known index; otherwise treat
     # the raw input as a valid-but-uncropped index so the caller gets the
-    # helpful "0 samples — run sams.py first" message rather than an error.
+    # helpful "0 samples, run sams.py first" message rather than an error.
     raw = args.index.strip()
     known = cli.known_indices()
     if not known or raw in known:
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         # the world, so this exits 0 and simply says what is missing.
         print(
             f"student {index} has {len(samples)} saved signature "
-            f"{'sample' if len(samples) == 1 else 'samples'} — "
+            f"{'sample' if len(samples) == 1 else 'samples'}, "
             f"at least {MIN_SAMPLES} are needed to compare"
         )
         print("       process more sheets with sams.py, then try again")
