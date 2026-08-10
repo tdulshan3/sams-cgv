@@ -135,6 +135,16 @@ class ProgressViewer:
             return []
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Clear the folder first. Step images are numbered by position, so when
+        # the pipeline gains or loses a stage the new run writes a different
+        # set of names and the old ones survive beside them. After the stubs
+        # were replaced this left 02_warped, 03_grey and 04_binary sitting
+        # among the seventeen real steps — three pictures of a pipeline that no
+        # longer exists, in the folder the report takes its screenshots from.
+        for stale in self.output_dir.glob("*.png"):
+            stale.unlink()
+
         written: list[Path] = []
         for number, step in enumerate(self._steps, start=1):
             path = self.output_dir / f"{number:02d}_{self._slug(step.name)}.png"
