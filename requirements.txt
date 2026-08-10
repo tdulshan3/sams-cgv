@@ -2,7 +2,7 @@
 # tested in: Python 3.13 on Arch based Linux.
 #
 # Install into a virtual environment. Do not pip install into the system Python
-# on Arch — it is externally managed.
+# on Arch: it is externally managed.
 #
 #   python -m venv .venv
 #   source .venv/bin/activate.fish
